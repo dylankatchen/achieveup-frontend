@@ -576,8 +576,14 @@ REACT_APP_ENVIRONMENT=development
 ```bash
 git clone https://github.com/AndresQ9/knowgap-backend.git
 cd knowgap-backend
-npm install
-npm start
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+Update the .env file using the demo.env 
+
+```bash
+python app.py
 ```
 
 ## 📞 Support & Contact
