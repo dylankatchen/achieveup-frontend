@@ -560,7 +560,7 @@ CREATE TABLE student_progress (
 
 ### Frontend Setup
 ```bash
-git clone https://github.com/nsanchez9009/achieveup-frontend.git
+git clone https://github.com/dylankatchen/achieveup-frontend.git
 cd achieveup-frontend
 npm install
 npm start
@@ -574,7 +574,7 @@ REACT_APP_ENVIRONMENT=development
 
 ### Backend Setup
 ```bash
-git clone https://github.com/AndresQ9/knowgap-backend.git
+git clone https://github.com/dylankatchen/knowgap-backend.git
 cd knowgap-backend
 python3 -m venv venv
 source venv/bin/activate
