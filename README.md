@@ -1,5 +1,5 @@
 # AchieveUp - AI-Powered Skill Tracking System
-
+Real- Evan
 ## 🎯 Vision & Overview
 a
 AchieveUp transforms traditional assessment into comprehensive skill tracking. Instead of just seeing grades, instructors get detailed insights into what specific skills each student has mastered and where they need support.
@@ -560,7 +560,7 @@ CREATE TABLE student_progress (
 
 ### Frontend Setup
 ```bash
-git clone https://github.com/nsanchez9009/achieveup-frontend.git
+git clone https://github.com/dylankatchen/achieveup-frontend.git
 cd achieveup-frontend
 npm install
 npm start
@@ -574,10 +574,16 @@ REACT_APP_ENVIRONMENT=development
 
 ### Backend Setup
 ```bash
-git clone https://github.com/AndresQ9/knowgap-backend.git
+git clone https://github.com/dylankatchen/knowgap-backend.git
 cd knowgap-backend
-npm install
-npm start
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+Update the .env file using the demo.env 
+
+```bash
+python app.py
 ```
 
 ## 📞 Support & Contact
