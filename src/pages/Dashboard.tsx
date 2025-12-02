@@ -3,8 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { canvasInstructorAPI, instructorAPI } from '../services/api';
 import { CanvasCourse } from '../types';
 import Card from '../components/common/Card';
-import { 
-  Home, Target, Award, Users, TrendingUp, Brain, Settings, 
+import {
+  Home, Target, Award, Users, TrendingUp, Brain, Settings,
   BookOpen, ArrowRight, CheckCircle, AlertTriangle, Clock,
   Zap, BarChart3, Plus, Lightbulb, ArrowUpRight
 } from 'lucide-react';
@@ -73,10 +73,10 @@ const Dashboard: React.FC = () => {
   // Generate realistic mock activity for demonstration
   const generateMockActivity = useCallback((coursesLength: number, matricesCount: number): Activity[] => {
     const now = new Date();
-    
+
     // Create contextual activities based on current state
     const activities: Activity[] = [];
-    
+
     if (coursesLength === 0) {
       activities.push({
         type: 'matrix',
@@ -102,7 +102,7 @@ const Dashboard: React.FC = () => {
         status: 'completed'
       });
     }
-    
+
     if (matricesCount > 0) {
       activities.push({
         type: 'assignment',
@@ -120,7 +120,7 @@ const Dashboard: React.FC = () => {
         status: 'pending'
       });
     }
-    
+
     activities.push({
       type: 'progress',
       title: 'Student Progress Tracking',
@@ -128,26 +128,26 @@ const Dashboard: React.FC = () => {
       time: new Date(now.getTime() - 15 * 60000).toISOString(),
       status: 'pending'
     });
-    
+
     return activities;
   }, []);
 
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       if (isInstructor) {
         // Load instructor-specific data
         try {
           const coursesResponse = await canvasInstructorAPI.getInstructorCourses();
           setCourses(coursesResponse.data);
-          
+
           // Try to get skill matrices count from all courses
           let totalMatrices = 0;
           if (coursesResponse.data.length > 0) {
             try {
               const { skillMatrixAPI } = await import('../services/api');
-              const matrixPromises = coursesResponse.data.map(course => 
+              const matrixPromises = coursesResponse.data.map(course =>
                 skillMatrixAPI.getAllByCourse(course.id).catch(() => ({ data: [] }))
               );
               const matrixResults = await Promise.all(matrixPromises);
@@ -158,22 +158,22 @@ const Dashboard: React.FC = () => {
             }
           }
           setSkillMatricesCount(totalMatrices);
-          
+
           // Try to get instructor dashboard data, but don't fail if it's not available
           let actualStudentCount = 0;
           try {
             const dashboardResponse = await instructorAPI.getInstructorDashboard();
             console.log('Instructor dashboard response:', dashboardResponse.data);
-            
-            actualStudentCount = dashboardResponse.data.totalStudents || 0;
-            
+
+            actualStudentCount = dashboardResponse.data.students || 0;
+
             // If the backend returns 0 students but we have courses, calculate a realistic number
             if (actualStudentCount === 0 && coursesResponse.data.length > 0) {
               console.log('Backend returned 0 students but we have courses, calculating realistic count');
               coursesResponse.data.forEach(course => {
                 const courseName = (course.name || '').toLowerCase();
                 const courseId = course.id || '';
-                
+
                 // Create a deterministic hash from course name and ID
                 let hash = 0;
                 const courseString = courseName + courseId;
@@ -182,10 +182,10 @@ const Dashboard: React.FC = () => {
                   hash = ((hash << 5) - hash) + char;
                   hash = hash & hash; // Convert to 32-bit integer
                 }
-                
+
                 // Use hash to determine student count (consistent for same course)
                 const hashMod = Math.abs(hash) % 100;
-                
+
                 if (courseName.includes('lab') || courseName.includes('workshop') || courseName.includes('seminar')) {
                   // Small courses: 10-15 students
                   actualStudentCount += 10 + (hashMod % 6);
@@ -198,7 +198,7 @@ const Dashboard: React.FC = () => {
                 }
               });
             }
-            
+
             setInstructorStats({
               totalCourses: coursesResponse.data.length,
               totalStudents: actualStudentCount,
@@ -216,7 +216,7 @@ const Dashboard: React.FC = () => {
               coursesResponse.data.forEach(course => {
                 const courseName = (course.name || '').toLowerCase();
                 const courseId = course.id || '';
-                
+
                 // Create a deterministic hash from course name and ID
                 let hash = 0;
                 const courseString = courseName + courseId;
@@ -225,10 +225,10 @@ const Dashboard: React.FC = () => {
                   hash = ((hash << 5) - hash) + char;
                   hash = hash & hash; // Convert to 32-bit integer
                 }
-                
+
                 // Use hash to determine student count (consistent for same course)
                 const hashMod = Math.abs(hash) % 100;
-                
+
                 if (courseName.includes('lab') || courseName.includes('workshop') || courseName.includes('seminar')) {
                   // Small courses: 10-15 students
                   mockStudentCount += 10 + (hashMod % 6);
@@ -241,7 +241,7 @@ const Dashboard: React.FC = () => {
                 }
               });
             }
-            
+
             setInstructorStats({
               totalCourses: coursesResponse.data.length,
               totalStudents: mockStudentCount,
@@ -274,7 +274,7 @@ const Dashboard: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);
-      
+
       // Provide fallback data so dashboard remains functional
       setCourses([]);
       if (isInstructor) {
@@ -312,7 +312,7 @@ const Dashboard: React.FC = () => {
     const now = new Date();
     const time = new Date(timestamp);
     const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
-    
+
     if (diffInMinutes < 1) return 'Just now';
     if (diffInMinutes < 60) return `${diffInMinutes} min ago`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hr ago`;
@@ -425,7 +425,7 @@ const Dashboard: React.FC = () => {
               {getGreeting()}, {user?.name || 'Instructor'}!
             </h1>
             <p className="text-gray-600 mt-2">
-              {isInstructor 
+              {isInstructor
                 ? 'Transform your assessments into comprehensive skill tracking with AI-powered insights.'
                 : 'Track your learning progress and skill development across all your courses.'
               }
@@ -443,14 +443,13 @@ const Dashboard: React.FC = () => {
             </div>
           )}
         </div>
-        
+
         {/* Enhanced Status Indicators */}
         <div className="mt-4 flex items-center gap-3 flex-wrap">
-          <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-            isInstructor 
-              ? 'bg-purple-100 text-purple-800' 
+          <div className={`px-3 py-1 rounded-full text-sm font-medium ${isInstructor
+              ? 'bg-purple-100 text-purple-800'
               : 'bg-blue-100 text-blue-800'
-          }`}>
+            }`}>
             <div className="flex items-center">
               <div className="w-2 h-2 bg-current rounded-full mr-2"></div>
               {isInstructor ? 'Instructor Dashboard' : 'Student Dashboard'}
@@ -462,7 +461,7 @@ const Dashboard: React.FC = () => {
               Canvas Connected
             </div>
           ) : (
-            <Link 
+            <Link
               to="/settings"
               className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
             >
@@ -477,7 +476,7 @@ const Dashboard: React.FC = () => {
             </div>
           )}
         </div>
-        
+
         {/* Canvas Token Warning for Users Without Token */}
         {!user?.hasCanvasToken && (
           <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -491,7 +490,7 @@ const Dashboard: React.FC = () => {
                 </h3>
                 <div className="mt-2 text-sm text-yellow-700">
                   <p>
-                    To access your courses and use AchieveUp features, you need to add your Canvas API token. 
+                    To access your courses and use AchieveUp features, you need to add your Canvas API token.
                     Go to <a href="/settings" className="font-medium underline hover:text-yellow-600">Settings</a> to configure it.
                   </p>
                 </div>
@@ -587,52 +586,48 @@ const Dashboard: React.FC = () => {
             <p className="text-gray-600">
               Set up skill tracking for your courses in three simple steps:
             </p>
-            
+
             <div className="space-y-4">
               {workflowSteps.map((step, index) => {
                 const Icon = step.icon;
                 const isLast = index === workflowSteps.length - 1;
-                
+
                 return (
                   <div key={step.id} className="relative">
-                    <div className={`flex items-center p-4 rounded-lg border-2 transition-all ${
-                      step.status === 'current' 
-                        ? 'border-ucf-gold bg-yellow-50' 
+                    <div className={`flex items-center p-4 rounded-lg border-2 transition-all ${step.status === 'current'
+                        ? 'border-ucf-gold bg-yellow-50'
                         : step.status === 'completed'
-                        ? 'border-green-300 bg-green-50'
-                        : 'border-gray-200 bg-gray-50'
-                    }`}>
-                      <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mr-4 ${
-                        step.status === 'current'
+                          ? 'border-green-300 bg-green-50'
+                          : 'border-gray-200 bg-gray-50'
+                      }`}>
+                      <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mr-4 ${step.status === 'current'
                           ? 'bg-ucf-gold text-white'
                           : step.status === 'completed'
-                          ? 'bg-green-500 text-white'
-                          : 'bg-gray-300 text-gray-600'
-                      }`}>
+                            ? 'bg-green-500 text-white'
+                            : 'bg-gray-300 text-gray-600'
+                        }`}>
                         {step.status === 'completed' ? (
                           <CheckCircle className="w-5 h-5" />
                         ) : (
                           <Icon className="w-5 h-5" />
                         )}
                       </div>
-                      
+
                       <div className="flex-1">
-                        <h3 className={`font-medium ${
-                          step.status === 'current' ? 'text-yellow-900' 
-                          : step.status === 'completed' ? 'text-green-900'
-                          : 'text-gray-700'
-                        }`}>
+                        <h3 className={`font-medium ${step.status === 'current' ? 'text-yellow-900'
+                            : step.status === 'completed' ? 'text-green-900'
+                              : 'text-gray-700'
+                          }`}>
                           Step {step.id}: {step.title}
                         </h3>
-                        <p className={`text-sm ${
-                          step.status === 'current' ? 'text-yellow-700'
+                        <p className={`text-sm ${step.status === 'current' ? 'text-yellow-700'
                           : step.status === 'completed' ? 'text-green-700'
-                          : 'text-gray-600'
-                        }`}>
+                            : 'text-gray-600'
+                          }`}>
                           {step.description}
                         </p>
                       </div>
-                      
+
                       {step.status === 'current' && (
                         <Link
                           to={step.href}
@@ -643,11 +638,10 @@ const Dashboard: React.FC = () => {
                         </Link>
                       )}
                     </div>
-                    
+
                     {!isLast && (
-                      <div className={`absolute left-9 top-16 w-0.5 h-6 ${
-                        step.status === 'completed' ? 'bg-green-300' : 'bg-gray-200'
-                      }`}></div>
+                      <div className={`absolute left-9 top-16 w-0.5 h-6 ${step.status === 'completed' ? 'bg-green-300' : 'bg-gray-200'
+                        }`}></div>
                     )}
                   </div>
                 );
@@ -658,13 +652,13 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* Enhanced Quick Actions */}
-      <Card 
-        title={isInstructor ? "Essential Tools" : "Quick Actions"} 
+      <Card
+        title={isInstructor ? "Essential Tools" : "Quick Actions"}
         className="mb-8"
         headerActions={
           isInstructor ? (
-            <Link 
-              to="/skill-matrix" 
+            <Link
+              to="/skill-matrix"
               className="text-sm text-ucf-gold hover:text-yellow-700 font-medium"
             >
               Get Started <ArrowUpRight className="w-4 h-4 inline ml-1" />
@@ -714,16 +708,15 @@ const Dashboard: React.FC = () => {
             <div className="space-y-4">
               {instructorStats.recentActivity.slice(0, 5).map((activity, index) => (
                 <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                    activity.type === 'matrix' ? 'bg-blue-100 text-blue-600' :
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${activity.type === 'matrix' ? 'bg-blue-100 text-blue-600' :
                     activity.type === 'assignment' ? 'bg-purple-100 text-purple-600' :
-                    activity.type === 'progress' ? 'bg-green-100 text-green-600' :
-                    'bg-gray-100 text-gray-600'
-                  }`}>
+                      activity.type === 'progress' ? 'bg-green-100 text-green-600' :
+                        'bg-gray-100 text-gray-600'
+                    }`}>
                     {activity.type === 'matrix' ? <Target className="w-4 h-4" /> :
-                     activity.type === 'assignment' ? <Brain className="w-4 h-4" /> :
-                     activity.type === 'progress' ? <BarChart3 className="w-4 h-4" /> :
-                     <Clock className="w-4 h-4" />}
+                      activity.type === 'assignment' ? <Brain className="w-4 h-4" /> :
+                        activity.type === 'progress' ? <BarChart3 className="w-4 h-4" /> :
+                          <Clock className="w-4 h-4" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
@@ -737,11 +730,10 @@ const Dashboard: React.FC = () => {
                     </p>
                   </div>
                   {activity.status && (
-                    <div className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                      activity.status === 'completed' ? 'bg-green-400' :
+                    <div className={`flex-shrink-0 w-2 h-2 rounded-full ${activity.status === 'completed' ? 'bg-green-400' :
                       activity.status === 'in-progress' ? 'bg-yellow-400' :
-                      'bg-gray-300'
-                    }`}></div>
+                        'bg-gray-300'
+                      }`}></div>
                   )}
                 </div>
               ))}
