@@ -592,7 +592,7 @@ const SkillAssignmentInterface: React.FC = () => {
     try {
       setLoading(true);
       const response = isInstructor 
-        ? await canvasAPI.getInstructorQuestions(quizId)
+        ? await canvasAPI.getInstructorQuestions(quizId, selectedCourse)
         : await canvasAPI.getQuestions(quizId);
       
       setQuestions(response.data);
@@ -623,7 +623,7 @@ const SkillAssignmentInterface: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [isInstructor, analyzeQuestionsWithAI]);
+  }, [isInstructor, analyzeQuestionsWithAI, selectedCourse]);
 
   useEffect(() => {
     loadCourses();
