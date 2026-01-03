@@ -98,6 +98,23 @@ export const badgeAPI = {
     api.post('/achieveup/badges/generate', data),
   getStudentBadges: (studentId: string): Promise<AxiosResponse<Badge[]>> =>
     api.get(`/achieveup/badges/${studentId}`),
+  getCourseBadges: (courseId: string): Promise<AxiosResponse<any>> =>
+    api.get(`/achieveup/badges/course/${courseId}`),
+  getStudentEarnedBadges: (studentId: string): Promise<AxiosResponse<{
+    student_id: string;
+    total_badges: number;
+    badges: Array<{
+      badge_id: string;
+      badge_name: string;
+      skill_name: string;
+      badge_level: string;
+      progress_percentage: number;
+      earned_at: string;
+      course_id: string;
+      course_name: string;
+    }>;
+  }>> =>
+    api.get(`/achieveup/badges/student/${studentId}/earned`),
 };
 
 // Progress Tracking
@@ -133,8 +150,8 @@ export const canvasAPI = {
     api.get('/canvas/instructor/courses'),
   getInstructorQuizzes: (courseId: string): Promise<AxiosResponse<CanvasQuiz[]>> =>
     api.get(`/canvas/instructor/courses/${courseId}/quizzes`),
-  getInstructorQuestions: (quizId: string): Promise<AxiosResponse<CanvasQuestion[]>> =>
-    api.get(`/canvas/instructor/quizzes/${quizId}/questions`),
+  getInstructorQuestions: (courseId: string, quizId: string): Promise<AxiosResponse<CanvasQuestion[]>> =>
+    api.get(`/canvas/instructor/courses/${courseId}/quizzes/${quizId}/questions`),
 };
 
 // Authentication

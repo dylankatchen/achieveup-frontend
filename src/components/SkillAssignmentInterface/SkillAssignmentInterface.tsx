@@ -72,7 +72,7 @@ const SkillAssignmentInterface: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [selectedQuiz, setSelectedQuiz] = useState<string>('');
-  
+
   // New state for skill matrix selection
   const [availableMatrices, setAvailableMatrices] = useState<any[]>([]);
   const [selectedMatrix, setSelectedMatrix] = useState<string>('');
@@ -92,6 +92,12 @@ const SkillAssignmentInterface: React.FC = () => {
 
   const isInstructor = user?.canvasTokenType === 'instructor';
 
+  function extractTextFromHTML(htmlString: string) {
+    var div = document.createElement('div');
+    div.innerHTML = htmlString;
+    return div.textContent || div.innerText; // textContent is preferred
+  }
+
   // Backend AI analysis for all questions
   const analyzeQuestionsWithAI = useCallback(async (questions: CanvasQuestion[]): Promise<void> => {
     if (!isInstructor || questions.length === 0) {
@@ -99,7 +105,7 @@ const SkillAssignmentInterface: React.FC = () => {
     }
 
     setAutoAnalysisInProgress(true);
-    
+
     // Set all questions to analyzing status
     const analyzingStatus: AIAnalysisStatus = {};
     questions.forEach(q => analyzingStatus[q.id] = 'analyzing');
@@ -107,13 +113,13 @@ const SkillAssignmentInterface: React.FC = () => {
 
     try {
       console.log('Starting AI analysis for questions:', questions.map(q => ({ id: q.id, text: q.question_text?.substring(0, 100) })));
-      
+
       const requestData = {
         courseId: selectedCourse,
         quizId: selectedQuiz,
         questions: questions.map(q => ({
           id: q.id,
-          text: q.question_text,
+          text: extractTextFromHTML(q.question_text),
           type: q.question_type || 'multiple_choice',
           points: q.points || 1
         }))
@@ -138,6 +144,7 @@ const SkillAssignmentInterface: React.FC = () => {
 
       // Set any remaining questions to completed (in case response is incomplete)
       questions.forEach(q => {
+        q.question_text = extractTextFromHTML(q.question_text);
         if (!completedStatus[q.id]) {
           completedStatus[q.id] = 'completed';
           if (!newSuggestions[q.id]) {
@@ -161,16 +168,16 @@ const SkillAssignmentInterface: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error analyzing questions with AI:', error);
-      
+
       // Generate mock suggestions as fallback
       const mockSuggestions = generateMockQuestionSuggestions(questions);
       setSuggestions(mockSuggestions);
-      
+
       // Set error status for all questions, then update to completed since we have mock suggestions
       const completedStatus: AIAnalysisStatus = {};
       questions.forEach(q => completedStatus[q.id] = 'completed');
       setAiAnalysisStatus(completedStatus);
-      
+
       // Provide detailed error handling with fallback message
       if (error.response?.status === 400) {
         const errorMsg = error.response?.data?.message || error.response?.data?.error || 'Bad request format';
@@ -185,31 +192,31 @@ const SkillAssignmentInterface: React.FC = () => {
     } finally {
       setAutoAnalysisInProgress(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInstructor, selectedCourse, selectedQuiz]);
 
   // Generate intelligent mock suggestions based on question content and available skills
   const generateMockQuestionSuggestions = (questions: CanvasQuestion[]): Suggestions => {
     const suggestions: Suggestions = {};
     const availableSkills = getMatrixSkills();
-    
+
     questions.forEach(question => {
       const questionText = (question.question_text || '').toLowerCase();
       const questionSkills: string[] = [];
-      
+
       // If we have matrix skills, try to match them to question content
       if (availableSkills.length > 0) {
         availableSkills.forEach(skill => {
           const skillWords = skill.toLowerCase().split(/[\s\-_]+/);
-          const hasMatch = skillWords.some(word => 
+          const hasMatch = skillWords.some(word =>
             word.length > 3 && questionText.includes(word)
           );
-          
+
           if (hasMatch && questionSkills.length < 3) {
             questionSkills.push(skill);
           }
         });
-        
+
         // If no direct matches, assign 1-2 random skills from the matrix
         if (questionSkills.length === 0) {
           const randomSkills = availableSkills
@@ -222,10 +229,10 @@ const SkillAssignmentInterface: React.FC = () => {
         const genericSuggestions = generateGenericSkillSuggestions(questionText);
         questionSkills.push(...genericSuggestions.slice(0, 2));
       }
-      
+
       suggestions[question.id] = questionSkills;
     });
-    
+
     return suggestions;
   };
 
@@ -233,7 +240,7 @@ const SkillAssignmentInterface: React.FC = () => {
   const generateGenericSkillSuggestions = (questionText: string): string[] => {
     const text = questionText.toLowerCase();
     const suggestions: string[] = [];
-    
+
     // Web development patterns
     if (text.includes('html') || text.includes('tag') || text.includes('element')) {
       suggestions.push('HTML Fundamentals');
@@ -247,7 +254,7 @@ const SkillAssignmentInterface: React.FC = () => {
     if (text.includes('responsive') || text.includes('mobile') || text.includes('media query')) {
       suggestions.push('Responsive Design');
     }
-    
+
     // Programming patterns
     if (text.includes('algorithm') || text.includes('sort') || text.includes('search')) {
       suggestions.push('Algorithm Design');
@@ -261,7 +268,7 @@ const SkillAssignmentInterface: React.FC = () => {
     if (text.includes('class') || text.includes('object') || text.includes('inheritance')) {
       suggestions.push('Object-Oriented Programming');
     }
-    
+
     // Database patterns
     if (text.includes('sql') || text.includes('select') || text.includes('database') || text.includes('query')) {
       suggestions.push('SQL Fundamentals');
@@ -269,7 +276,7 @@ const SkillAssignmentInterface: React.FC = () => {
     if (text.includes('table') || text.includes('relation') || text.includes('primary key')) {
       suggestions.push('Database Design');
     }
-    
+
     // General academic patterns
     if (text.includes('analyze') || text.includes('evaluation') || text.includes('compare')) {
       suggestions.push('Critical Thinking');
@@ -280,19 +287,19 @@ const SkillAssignmentInterface: React.FC = () => {
     if (text.includes('research') || text.includes('source') || text.includes('evidence')) {
       suggestions.push('Research Skills');
     }
-    
+
     // If no specific patterns found, provide general suggestions
     if (suggestions.length === 0) {
       suggestions.push('Analysis', 'Problem Solving');
     }
-    
+
     return suggestions;
   };
 
   const loadCourses = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
-      const response = isInstructor 
+      const response = isInstructor
         ? await canvasAPI.getInstructorCourses()
         : await canvasAPI.getCourses();
       setCourses(response.data);
@@ -307,26 +314,26 @@ const SkillAssignmentInterface: React.FC = () => {
   const loadQuizzes = useCallback(async (courseId: string): Promise<void> => {
     try {
       setLoading(true);
-      
-      const response = isInstructor 
+
+      const response = isInstructor
         ? await canvasAPI.getInstructorQuizzes(courseId)
         : await canvasAPI.getQuizzes(courseId);
-      
+
       setQuizzes(response.data);
       setSelectedCourse(courseId);
-      
+
       // Reset quiz selection when course changes
       setSelectedQuiz('');
       setQuestions([]);
       setValue('quizId', '');
-      
+
       // Load available skill matrices for this course
       loadSkillMatrices(courseId);
-      
+
     } catch (error) {
       console.error('Error loading quizzes:', error);
       toast.error('Failed to load quizzes. Please try again.');
-      
+
       // Set empty arrays so UI doesn't break
       setQuizzes([]);
       setSelectedCourse(courseId);
@@ -336,14 +343,14 @@ const SkillAssignmentInterface: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInstructor, setValue]);
 
   const loadSkillMatrices = async (courseId: string) => {
     try {
       setLoadingMatrices(true);
       console.log(`Loading skill matrices for course: ${courseId}`);
-      
+
       // Debug: Check authentication status
       const token = localStorage.getItem('token');
       console.log('Authentication debug:', {
@@ -352,12 +359,12 @@ const SkillAssignmentInterface: React.FC = () => {
         tokenPreview: token ? `${token.substring(0, 10)}...` : 'No token',
         courseId: courseId
       });
-      
+
       const response = await skillMatrixAPI.getAllByCourse(courseId);
       console.log(`Skill matrices API response for course ${courseId}:`, response.data);
-      
+
       setAvailableMatrices(response.data);
-      
+
       // Auto-select first matrix if available
       if (response.data.length > 0) {
         console.log(`Found ${response.data.length} matrices, auto-selecting first one:`, response.data[0]);
@@ -367,7 +374,7 @@ const SkillAssignmentInterface: React.FC = () => {
         console.log(`No matrices found for course ${courseId}, providing guidance`);
         setSelectedMatrix('');
         setSelectedMatrixData(null);
-        
+
         // Show helpful guidance when no matrices exist
         toast.success(`No skill matrices found for this course yet. Create one first using the Skill Matrix page.`, {
           duration: 5000
@@ -382,11 +389,11 @@ const SkillAssignmentInterface: React.FC = () => {
         url: error.response?.config?.url,
         courseId: courseId
       });
-      
+
       // Provide more specific error messages and guidance based on status
       if (error.response?.status === 404) {
         console.log(`404 - No matrices endpoint found or no matrices exist for course ${courseId}`);
-        
+
         // For 404, provide mock matrices to test the interface
         const mockMatrices = generateMockMatrices(courseId);
         if (mockMatrices.length > 0) {
@@ -417,7 +424,7 @@ const SkillAssignmentInterface: React.FC = () => {
           headers: error.response?.config?.headers,
           courseId: courseId
         });
-        
+
         // Check if it's a token issue vs permission issue
         const token = localStorage.getItem('token');
         if (!token) {
@@ -432,7 +439,7 @@ const SkillAssignmentInterface: React.FC = () => {
             { duration: 8000 }
           );
         }
-        
+
         // Provide mock matrices so user can still test the interface
         console.log('Providing mock matrices due to 403 error');
         const mockMatrices = generateMockMatrices(courseId);
@@ -446,7 +453,7 @@ const SkillAssignmentInterface: React.FC = () => {
         }
       } else if (error.response?.status >= 500) {
         toast.error('Server error while loading matrices. Using demo data for testing.');
-        
+
         // Provide mock matrices for testing during server issues
         const mockMatrices = generateMockMatrices(courseId);
         setAvailableMatrices(mockMatrices);
@@ -457,7 +464,7 @@ const SkillAssignmentInterface: React.FC = () => {
       } else {
         console.warn('Failed to load skill matrices:', error.message);
         toast.error(`Failed to load skill matrices: ${error.message}. Using demo data for testing.`);
-        
+
         // Provide mock matrices as fallback
         const mockMatrices = generateMockMatrices(courseId);
         setAvailableMatrices(mockMatrices);
@@ -510,7 +517,7 @@ const SkillAssignmentInterface: React.FC = () => {
         'Responsive Design'
       ];
     }
-    
+
     // Programming/Computer Science skills
     if (courseId.toLowerCase().includes('prog') || courseId.toLowerCase().includes('cs') || courseId.toLowerCase().includes('cop')) {
       return [
@@ -521,7 +528,7 @@ const SkillAssignmentInterface: React.FC = () => {
         'Problem Solving'
       ];
     }
-    
+
     // Database/Data skills
     if (courseId.toLowerCase().includes('data') || courseId.toLowerCase().includes('db') || courseId.toLowerCase().includes('sql')) {
       return [
@@ -532,7 +539,7 @@ const SkillAssignmentInterface: React.FC = () => {
         'Data Analysis'
       ];
     }
-    
+
     // Generic academic skills
     return [
       'Critical Thinking',
@@ -555,7 +562,7 @@ const SkillAssignmentInterface: React.FC = () => {
         'Web Security'
       ];
     }
-    
+
     // Programming/Computer Science advanced skills
     if (courseId.toLowerCase().includes('prog') || courseId.toLowerCase().includes('cs') || courseId.toLowerCase().includes('cop')) {
       return [
@@ -566,7 +573,7 @@ const SkillAssignmentInterface: React.FC = () => {
         'Code Optimization'
       ];
     }
-    
+
     // Database/Data advanced skills
     if (courseId.toLowerCase().includes('data') || courseId.toLowerCase().includes('db') || courseId.toLowerCase().includes('sql')) {
       return [
@@ -577,7 +584,7 @@ const SkillAssignmentInterface: React.FC = () => {
         'ETL Processes'
       ];
     }
-    
+
     // Generic advanced academic skills
     return [
       'Advanced Analysis',
@@ -588,31 +595,34 @@ const SkillAssignmentInterface: React.FC = () => {
     ];
   };
 
-  const loadQuestions = useCallback(async (quizId: string): Promise<void> => {
+  const loadQuestions = useCallback(async (quizId: string, courseId: string): Promise<void> => {
     try {
       setLoading(true);
-      const response = isInstructor 
-        ? await canvasAPI.getInstructorQuestions(quizId)
-        : await canvasAPI.getQuestions(quizId);
-      
+      const response = isInstructor
+        ? await canvasAPI.getInstructorQuestions(courseId, quizId)
+        : await canvasAPI.getQuestions(quizId);//TODO: fix this
+
       setQuestions(response.data);
       setSelectedQuiz(quizId);
-      
+
       // Initialize question skills and status
       const initialSkills: QuestionSkills = {};
       const initialStatus: AIAnalysisStatus = {};
       const initialReviewStatus: HumanReviewStatus = {};
-      
+      console.log(response.data);
+
+
+
       response.data.forEach((question: CanvasQuestion) => {
         initialSkills[question.id] = [];
         initialStatus[question.id] = 'pending';
         initialReviewStatus[question.id] = false;
       });
-      
+
       setQuestionSkills(initialSkills);
       setAiAnalysisStatus(initialStatus);
       setHumanReviewStatus(initialReviewStatus);
-      
+
       // Auto-analyze questions if instructor and questions exist
       if (isInstructor && response.data.length > 0) {
         analyzeQuestionsWithAI(response.data);
@@ -637,7 +647,7 @@ const SkillAssignmentInterface: React.FC = () => {
 
   useEffect(() => {
     if (watchedQuiz) {
-      loadQuestions(watchedQuiz);
+      loadQuestions(watchedQuiz, watchedCourse);
     }
   }, [watchedQuiz, loadQuestions]);
 
@@ -673,16 +683,16 @@ const SkillAssignmentInterface: React.FC = () => {
 
   const bulkAssignSkill = (skill: string): void => {
     if (!skill) return;
-    
+
     const filteredQuestions = getFilteredQuestions();
     const updatedSkills = { ...questionSkills };
-    
+
     filteredQuestions.forEach(question => {
       if (!updatedSkills[question.id]?.includes(skill)) {
         updatedSkills[question.id] = [...(updatedSkills[question.id] || []), skill];
       }
     });
-    
+
     setQuestionSkills(updatedSkills);
     setBulkSkill('');
     toast.success(`Added "${skill}" to ${filteredQuestions.length} questions`);
@@ -692,7 +702,7 @@ const SkillAssignmentInterface: React.FC = () => {
     const updatedSkills = { ...questionSkills };
     let assignedCount = 0;
     let questionsWithSuggestions = 0;
-    
+
     // Process all questions (not just filtered ones) that have suggestions
     questions.forEach(question => {
       const questionSuggestions = suggestions[question.id] || [];
@@ -706,9 +716,9 @@ const SkillAssignmentInterface: React.FC = () => {
         });
       }
     });
-    
+
     setQuestionSkills(updatedSkills);
-    
+
     if (assignedCount > 0) {
       toast.success(`Assigned ${assignedCount} skills from AI suggestions to ${questionsWithSuggestions} questions`);
     } else {
@@ -720,15 +730,15 @@ const SkillAssignmentInterface: React.FC = () => {
     if (!Array.isArray(questions)) {
       return [];
     }
-    
+
     return questions.filter(question => {
       const matchesSearch = question.question_text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           question.id.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesSkillFilter = skillFilter === 'all' || 
-                                 (skillFilter === 'assigned' && questionSkills[question.id]?.length > 0) ||
-                                 (skillFilter === 'unassigned' && (!questionSkills[question.id] || questionSkills[question.id].length === 0));
-      
+        question.id.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesSkillFilter = skillFilter === 'all' ||
+        (skillFilter === 'assigned' && questionSkills[question.id]?.length > 0) ||
+        (skillFilter === 'unassigned' && (!questionSkills[question.id] || questionSkills[question.id].length === 0));
+
       return matchesSearch && matchesSkillFilter;
     });
   };
@@ -802,29 +812,29 @@ const SkillAssignmentInterface: React.FC = () => {
       }
 
       console.log('Testing authentication token...');
-      
+
       // Test token with a simple API call
       const { authAPI } = await import('../../services/api');
       const userResponse = await authAPI.me();
-      
+
       console.log('Token validation successful:', {
         user: userResponse.data.user || userResponse.data,
         tokenValid: true
       });
-      
+
       // Check if user has instructor permissions
       const userData = userResponse.data.user || userResponse.data;
       if (userData.canvasTokenType !== 'instructor' && userData.role !== 'instructor') {
         toast.error('Instructor permissions required. Please check your account type.');
         return false;
       }
-      
+
       toast.success('Authentication verified. Instructor permissions confirmed.');
       return true;
-      
+
     } catch (error: any) {
       console.error('Token validation failed:', error);
-      
+
       if (error.response?.status === 401) {
         toast.error('Authentication token is invalid or expired. Please log in again.');
       } else if (error.response?.status === 403) {
@@ -832,7 +842,7 @@ const SkillAssignmentInterface: React.FC = () => {
       } else {
         toast.error('Failed to validate authentication. Please check your connection.');
       }
-      
+
       return false;
     }
   };
@@ -844,540 +854,539 @@ const SkillAssignmentInterface: React.FC = () => {
         subtitle="Assign skills to quiz questions using AI-powered analysis and zero-shot classification"
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-            {/* Course and Quiz Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Course
-                </label>
-                <select
-                  {...register('courseId', { required: 'Please select a course' })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
-                >
-                  <option value="">Select a course</option>
-                                  {Array.isArray(courses) && courses.map(course => (
+          {/* Course and Quiz Selection */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Course
+              </label>
+              <select
+                {...register('courseId', { required: 'Please select a course' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
+              >
+                <option value="">Select a course</option>
+                {Array.isArray(courses) && courses.map(course => (
                   <option key={course.id} value={course.id}>
                     {course.name} ({course.code})
                   </option>
                 ))}
-                </select>
-                {errors.courseId && (
-                  <p className="mt-1 text-sm text-red-600">{errors.courseId.message}</p>
-                )}
-                {/* Debug: Authentication Test Button */}
-                <button
-                  type="button"
-                  onClick={validateAndTestToken}
-                  className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
-                >
-                  🔍 Test Authentication
-                </button>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Skill Matrix
-                </label>
-                <select
-                  value={selectedMatrix}
-                  onChange={(e) => handleMatrixSelection(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
-                  disabled={!selectedCourse || loadingMatrices}
-                >
-                  <option value="">
-                    {!selectedCourse ? 'Select a course first' : 
-                     loadingMatrices ? 'Loading matrices...' : 
-                     availableMatrices.length === 0 ? 'No skill matrices found' :
-                     'Select a skill matrix'}
-                  </option>
-                  {availableMatrices.map(matrix => (
-                    <option key={matrix._id} value={matrix._id}>
-                      {matrix.matrix_name} ({matrix.skills.length} skills)
-                    </option>
-                  ))}
-                </select>
-                {selectedCourse && availableMatrices.length === 0 && !loadingMatrices && (
-                  <p className="mt-1 text-sm text-blue-600">
-                    <a href="/skill-matrix" className="hover:underline">Create a skill matrix first</a>
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quiz
-                </label>
-                <select
-                  {...register('quizId', { required: 'Please select a quiz' })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
-                  disabled={!selectedCourse || loading}
-                >
-                  <option value="">
-                    {!selectedCourse ? 'Select a course first' : 
-                     loading ? 'Loading quizzes...' : 
-                     'Select a quiz'}
-                  </option>
-                  {Array.isArray(quizzes) && quizzes.map(quiz => (
-                    <option key={quiz.id} value={quiz.id}>
-                      {quiz.title}
-                    </option>
-                  ))}
-                </select>
-                {errors.quizId && (
-                  <p className="mt-1 text-sm text-red-600">{errors.quizId.message}</p>
-                )}
-              </div>
+              </select>
+              {errors.courseId && (
+                <p className="mt-1 text-sm text-red-600">{errors.courseId.message}</p>
+              )}
+              {/* Debug: Authentication Test Button */}
+              <button
+                type="button"
+                onClick={validateAndTestToken}
+                className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+              >
+                🔍 Test Authentication
+              </button>
             </div>
 
-            {/* No Course Selected */}
-            {!selectedCourse && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Course to Get Started</h3>
-                <p className="text-gray-600">
-                  Choose one of your courses above to view and assign skills to quiz questions.
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Skill Matrix
+              </label>
+              <select
+                value={selectedMatrix}
+                onChange={(e) => handleMatrixSelection(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
+                disabled={!selectedCourse || loadingMatrices}
+              >
+                <option value="">
+                  {!selectedCourse ? 'Select a course first' :
+                    loadingMatrices ? 'Loading matrices...' :
+                      availableMatrices.length === 0 ? 'No skill matrices found' :
+                        'Select a skill matrix'}
+                </option>
+                {availableMatrices.map(matrix => (
+                  <option key={matrix._id} value={matrix._id}>
+                    {matrix.matrix_name} ({matrix.skills.length} skills)
+                  </option>
+                ))}
+              </select>
+              {selectedCourse && availableMatrices.length === 0 && !loadingMatrices && (
+                <p className="mt-1 text-sm text-blue-600">
+                  <a href="/skill-matrix" className="hover:underline">Create a skill matrix first</a>
                 </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Quiz
+              </label>
+              <select
+                {...register('quizId', { required: 'Please select a quiz' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
+                disabled={!selectedCourse || loading}
+              >
+                <option value="">
+                  {!selectedCourse ? 'Select a course first' :
+                    loading ? 'Loading quizzes...' :
+                      'Select a quiz'}
+                </option>
+                {Array.isArray(quizzes) && quizzes.map(quiz => (
+                  <option key={quiz.id} value={quiz.id}>
+                    {quiz.title}
+                  </option>
+                ))}
+              </select>
+              {errors.quizId && (
+                <p className="mt-1 text-sm text-red-600">{errors.quizId.message}</p>
+              )}
+            </div>
+          </div>
+
+          {/* No Course Selected */}
+          {!selectedCourse && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <BookOpen className="w-8 h-8 text-gray-400" />
               </div>
-            )}
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Course to Get Started</h3>
+              <p className="text-gray-600">
+                Choose one of your courses above to view and assign skills to quiz questions.
+              </p>
+            </div>
+          )}
 
-            {/* No Quiz Selected */}
-            {selectedCourse && !selectedQuiz && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Target className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Quiz</h3>
-                <p className="text-gray-600">
-                  Choose a quiz from the dropdown above to view its questions and assign skills.
-                </p>
-                {quizzes.length === 0 && selectedCourse && !loading && (
-                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-md mx-auto">
-                    <h4 className="text-sm font-medium text-blue-800 mb-2">No Quizzes Found</h4>
-                    <p className="text-sm text-blue-700">
-                      This course doesn't have any quizzes yet. Create quizzes in Canvas to start assigning skills to questions.
-                    </p>
-                  </div>
-                )}
+          {/* No Quiz Selected */}
+          {selectedCourse && !selectedQuiz && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Target className="w-8 h-8 text-gray-400" />
               </div>
-            )}
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Select a Quiz</h3>
+              <p className="text-gray-600">
+                Choose a quiz from the dropdown above to view its questions and assign skills.
+              </p>
+              {quizzes.length === 0 && selectedCourse && !loading && (
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-md mx-auto">
+                  <h4 className="text-sm font-medium text-blue-800 mb-2">No Quizzes Found</h4>
+                  <p className="text-sm text-blue-700">
+                    This course doesn't have any quizzes yet. Create quizzes in Canvas to start assigning skills to questions.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
-            {/* Selected Matrix Info */}
-            {selectedMatrixData && (
-              <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="text-lg font-medium text-green-900 mb-2">
-                      Using Skill Matrix: {selectedMatrixData.matrix_name}
-                    </h4>
-                    <p className="text-sm text-green-700 mb-3">
-                      {selectedMatrixData.skills.length} skills available for assignment
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedMatrixData.skills.slice(0, 8).map((skill: string, index: number) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                      {selectedMatrixData.skills.length > 8 && (
-                        <span className="text-xs text-green-600">
-                          +{selectedMatrixData.skills.length - 8} more skills
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="ml-4">
-                    <span className="text-xs text-green-600">
-                      Created: {new Date(selectedMatrixData.created_at).toLocaleDateString()}
-                    </span>
+          {/* Selected Matrix Info */}
+          {selectedMatrixData && (
+            <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="text-lg font-medium text-green-900 mb-2">
+                    Using Skill Matrix: {selectedMatrixData.matrix_name}
+                  </h4>
+                  <p className="text-sm text-green-700 mb-3">
+                    {selectedMatrixData.skills.length} skills available for assignment
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedMatrixData.skills.slice(0, 8).map((skill: string, index: number) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                    {selectedMatrixData.skills.length > 8 && (
+                      <span className="text-xs text-green-600">
+                        +{selectedMatrixData.skills.length - 8} more skills
+                      </span>
+                    )}
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* No Matrix Selected Warning */}
-            {selectedCourse && availableMatrices.length > 0 && !selectedMatrix && (
-              <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
-                    <span className="text-yellow-600 text-lg">⚠️</span>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-yellow-900">No Skill Matrix Selected</h4>
-                    <p className="text-sm text-yellow-700">
-                      Please select a skill matrix to see available skills for assignment.
-                    </p>
-                  </div>
+                <div className="ml-4">
+                  <span className="text-xs text-green-600">
+                    Created: {new Date(selectedMatrixData.created_at).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Stats and Actions - Only show if quiz is selected */}
-            {selectedQuiz && questions.length > 0 && (
-              <>
-                {/* Stats and Controls */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <span className="text-blue-600 font-bold">{stats.totalQuestions}</span>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-blue-900">Total Questions</p>
-                        <p className="text-xs text-blue-600">Available for assignment</p>
-                      </div>
+          {/* No Matrix Selected Warning */}
+          {selectedCourse && availableMatrices.length > 0 && !selectedMatrix && (
+            <div className="mb-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                  <span className="text-yellow-600 text-lg">⚠️</span>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-yellow-900">No Skill Matrix Selected</h4>
+                  <p className="text-sm text-yellow-700">
+                    Please select a skill matrix to see available skills for assignment.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Stats and Actions - Only show if quiz is selected */}
+          {selectedQuiz && questions.length > 0 && (
+            <>
+              {/* Stats and Controls */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <span className="text-blue-600 font-bold">{stats.totalQuestions}</span>
                     </div>
-                  </div>
-
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                        <span className="text-green-600 font-bold">{stats.assignedQuestions}</span>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-green-900">Assigned</p>
-                        <p className="text-xs text-green-600">Have skills assigned</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-yellow-50 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                        <span className="text-yellow-600 font-bold">{stats.unassignedQuestions}</span>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-yellow-900">Unassigned</p>
-                        <p className="text-xs text-yellow-600">Need skill assignment</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-purple-50 rounded-lg p-4">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <span className="text-purple-600 font-bold">{stats.totalSkills}</span>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-purple-900">Total Skills</p>
-                        <p className="text-xs text-purple-600">Assigned across all questions</p>
-                      </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-blue-900">Total Questions</p>
+                      <p className="text-xs text-blue-600">Available for assignment</p>
                     </div>
                   </div>
                 </div>
 
-                {/* AI Analysis Controls */}
-                {isInstructor && (
-                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 mb-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Brain className="w-6 h-6 text-blue-600 mr-3" />
-                        <div>
-                          <h3 className="text-lg font-medium text-gray-900">AI-Powered Analysis</h3>
-                          <p className="text-sm text-gray-600">
-                            Let AI analyze questions and suggest skills automatically
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex space-x-3">
-                        <Button
-                          type="button"
-                          onClick={() => analyzeQuestionsWithAI(questions)}
-                          loading={autoAnalysisInProgress}
-                          disabled={questions.length === 0}
-                          className="flex items-center"
-                        >
-                          <Zap className="w-4 h-4 mr-2" />
-                          Analyze Questions
-                        </Button>
-                        <Button
-                          type="button"
-                          onClick={bulkAssignFromSuggestions}
-                          variant="secondary"
-                          disabled={Object.values(suggestions).every(arr => arr.length === 0)}
-                          className="flex items-center"
-                        >
-                          <Target className="w-4 h-4 mr-2" />
-                          Bulk Assign
-                        </Button>
-                      </div>
+                <div className="bg-green-50 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                      <span className="text-green-600 font-bold">{stats.assignedQuestions}</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-green-900">Assigned</p>
+                      <p className="text-xs text-green-600">Have skills assigned</p>
                     </div>
                   </div>
-                )}
-
-                {/* Search and Filter Controls */}
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                  <div className="flex-1">
-                    <Input
-                      placeholder="Search questions..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full"
-                    />
-                  </div>
-                  <select
-                    value={skillFilter}
-                    onChange={(e) => setSkillFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
-                  >
-                    <option value="all">All Questions</option>
-                    <option value="assigned">Assigned Questions</option>
-                    <option value="unassigned">Unassigned Questions</option>
-                  </select>
                 </div>
 
-                {/* Bulk Operations */}
-                <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Bulk Operations</h4>
-                  
-                  {/* Matrix Skills Quick Assignment */}
-                  {selectedMatrixData && (
-                    <div className="mb-4">
-                      <h5 className="text-xs font-medium text-gray-700 mb-2">Quick Assign from Matrix:</h5>
-                      <div className="flex flex-wrap gap-2">
-                        {getMatrixSkills().slice(0, 6).map((skill: string, index: number) => (
-                          <button
-                            key={index}
-                            type="button"
-                            onClick={() => bulkAssignSkill(skill)}
-                            className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full hover:bg-blue-200 transition-colors"
-                          >
-                            {skill}
-                          </button>
-                        ))}
-                        {getMatrixSkills().length > 6 && (
-                          <span className="text-xs text-gray-500 px-2 py-1">
-                            +{getMatrixSkills().length - 6} more in matrix
-                          </span>
-                        )}
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                      <span className="text-yellow-600 font-bold">{stats.unassignedQuestions}</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-yellow-900">Unassigned</p>
+                      <p className="text-xs text-yellow-600">Need skill assignment</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <span className="text-purple-600 font-bold">{stats.totalSkills}</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-purple-900">Total Skills</p>
+                      <p className="text-xs text-purple-600">Assigned across all questions</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* AI Analysis Controls */}
+              {isInstructor && (
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 mb-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Brain className="w-6 h-6 text-blue-600 mr-3" />
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900">AI-Powered Analysis</h3>
+                        <p className="text-sm text-gray-600">
+                          Let AI analyze questions and suggest skills automatically
+                        </p>
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Custom Skill Assignment */}
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Enter custom skill name for bulk assignment..."
-                        value={bulkSkill}
-                        onChange={(e) => setBulkSkill(e.target.value)}
-                      />
-                    </div>
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-3">
                       <Button
                         type="button"
-                        onClick={() => bulkAssignSkill(bulkSkill)}
-                        disabled={!bulkSkill}
-                        variant="secondary"
-                        size="sm"
+                        onClick={() => analyzeQuestionsWithAI(questions)}
+                        loading={autoAnalysisInProgress}
+                        disabled={questions.length === 0}
+                        className="flex items-center"
                       >
-                        Add to All
+                        <Zap className="w-4 h-4 mr-2" />
+                        Analyze Questions
                       </Button>
                       <Button
                         type="button"
                         onClick={bulkAssignFromSuggestions}
-                        disabled={Object.values(suggestions).every(arr => arr.length === 0)}
                         variant="secondary"
-                        size="sm"
+                        disabled={Object.values(suggestions).every(arr => arr.length === 0)}
+                        className="flex items-center"
                       >
-                        Use AI Suggestions
+                        <Target className="w-4 h-4 mr-2" />
+                        Bulk Assign
                       </Button>
                     </div>
                   </div>
                 </div>
+              )}
 
-                              {/* Questions List */}
+              {/* Search and Filter Controls */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search questions..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <select
+                  value={skillFilter}
+                  onChange={(e) => setSkillFilter(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
+                >
+                  <option value="all">All Questions</option>
+                  <option value="assigned">Assigned Questions</option>
+                  <option value="unassigned">Unassigned Questions</option>
+                </select>
+              </div>
+
+              {/* Bulk Operations */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Bulk Operations</h4>
+
+                {/* Matrix Skills Quick Assignment */}
+                {selectedMatrixData && (
+                  <div className="mb-4">
+                    <h5 className="text-xs font-medium text-gray-700 mb-2">Quick Assign from Matrix:</h5>
+                    <div className="flex flex-wrap gap-2">
+                      {getMatrixSkills().slice(0, 6).map((skill: string, index: number) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => bulkAssignSkill(skill)}
+                          className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full hover:bg-blue-200 transition-colors"
+                        >
+                          {skill}
+                        </button>
+                      ))}
+                      {getMatrixSkills().length > 6 && (
+                        <span className="text-xs text-gray-500 px-2 py-1">
+                          +{getMatrixSkills().length - 6} more in matrix
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Custom Skill Assignment */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <Input
+                      placeholder="Enter custom skill name for bulk assignment..."
+                      value={bulkSkill}
+                      onChange={(e) => setBulkSkill(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button
+                      type="button"
+                      onClick={() => bulkAssignSkill(bulkSkill)}
+                      disabled={!bulkSkill}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      Add to All
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={bulkAssignFromSuggestions}
+                      disabled={Object.values(suggestions).every(arr => arr.length === 0)}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      Use AI Suggestions
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Questions List */}
               <div className="space-y-6">
                 {Array.isArray(filteredQuestions) && filteredQuestions.map((question) => {
-                    // const questionAnalysisData = questionAnalysis.find(a => a.questionId === question.id);
-                    const questionSuggestions = suggestions[question.id] || [];
-                    const assignedSkills = questionSkills[question.id] || [];
-                    const analysisStatus = aiAnalysisStatus[question.id] || 'pending';
-                    const isReviewed = humanReviewStatus[question.id] || false;
+                  // const questionAnalysisData = questionAnalysis.find(a => a.questionId === question.id);
+                  const questionSuggestions = suggestions[question.id] || [];
+                  const assignedSkills = questionSkills[question.id] || [];
+                  const analysisStatus = aiAnalysisStatus[question.id] || 'pending';
+                  const isReviewed = humanReviewStatus[question.id] || false;
 
-                    return (
-                      <Card key={question.id} className="overflow-hidden">
-                        <div className="p-6">
-                          {/* Question Header */}
-                          <div className="flex items-start justify-between mb-4">
-                            <div className="flex-1">
-                              <div className="flex items-center mb-2">
-                                <h3 className="text-lg font-medium text-gray-900">Question {question.id}</h3>
-                                {analysisStatus === 'analyzing' && (
-                                  <Clock className="w-4 h-4 text-blue-500 ml-2 animate-spin" />
-                                )}
-                                {analysisStatus === 'completed' && (
-                                  <CheckCircle className="w-4 h-4 text-green-500 ml-2" />
-                                )}
-                                {analysisStatus === 'error' && (
-                                  <AlertCircle className="w-4 h-4 text-red-500 ml-2" />
-                                )}
-                                {isReviewed && (
-                                  <div className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                                    Reviewed
-                                  </div>
-                                )}
-                              </div>
-                              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                                <p className="text-gray-800 leading-relaxed">{question.question_text}</p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* AI Analysis Results - Temporarily disabled */}
-                          {false && (
-                            <div className="bg-blue-50 rounded-lg p-4 mb-4">
-                              <h4 className="text-sm font-medium text-blue-900 mb-2">AI Analysis</h4>
-                              <div className="flex items-center space-x-4 text-sm">
-                                <span className="text-blue-700">
-                                  Complexity: <span className="font-medium">medium</span>
-                                </span>
-                                <span className="text-blue-700">
-                                  Confidence: <span className="font-medium">85%</span>
-                                </span>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* AI Suggestions */}
-                          {questionSuggestions.length > 0 && (
-                            <div className="mb-4">
-                              <h4 className="text-sm font-medium text-gray-700 mb-2">AI Suggestions</h4>
-                              <div className="flex flex-wrap gap-2">
-                                {Array.isArray(questionSuggestions) && questionSuggestions.map((skill, index) => (
-                                  <button
-                                    key={index}
-                                    type="button"
-                                    onClick={() => addSuggestionToQuestion(question.id, skill)}
-                                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                                      assignedSkills.includes(skill)
-                                        ? 'bg-green-100 text-green-800 cursor-default'
-                                        : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                                    }`}
-                                    disabled={assignedSkills.includes(skill)}
-                                  >
-                                    <Lightbulb className="w-3 h-3 inline mr-1" />
-                                    {skill}
-                                    {assignedSkills.includes(skill) && (
-                                      <CheckCircle className="w-3 h-3 inline ml-1" />
-                                    )}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* No AI Suggestions Available */}
-                          {analysisStatus === 'completed' && questionSuggestions.length === 0 && (
-                            <div className="mb-4">
-                              <h4 className="text-sm font-medium text-gray-700 mb-2">AI Suggestions</h4>
-                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                                <div className="flex items-center">
-                                  <AlertCircle className="w-4 h-4 text-yellow-600 mr-2" />
-                                  <p className="text-sm text-yellow-800">
-                                    <strong>No AI suggestions available.</strong> The AI analysis completed but didn't return any skill recommendations for this question. This appears to be a backend issue.
-                                  </p>
+                  return (
+                    <Card key={question.id} className="overflow-hidden">
+                      <div className="p-6">
+                        {/* Question Header */}
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center mb-2">
+                              <h3 className="text-lg font-medium text-gray-900">Question {question.id}</h3>
+                              {analysisStatus === 'analyzing' && (
+                                <Clock className="w-4 h-4 text-blue-500 ml-2 animate-spin" />
+                              )}
+                              {analysisStatus === 'completed' && (
+                                <CheckCircle className="w-4 h-4 text-green-500 ml-2" />
+                              )}
+                              {analysisStatus === 'error' && (
+                                <AlertCircle className="w-4 h-4 text-red-500 ml-2" />
+                              )}
+                              {isReviewed && (
+                                <div className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                                  Reviewed
                                 </div>
-                                <p className="text-xs text-yellow-700 mt-2">
-                                  You can still assign skills manually using the input field below.
-                                </p>
-                              </div>
+                              )}
                             </div>
-                          )}
-
-                          {/* Assigned Skills */}
-                          <div className="mb-4">
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">Assigned Skills</h4>
-                            {assignedSkills.length > 0 ? (
-                              <div className="flex flex-wrap gap-2">
-                                {Array.isArray(assignedSkills) && assignedSkills.map((skill, index) => (
-                                  <span
-                                    key={index}
-                                    className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800"
-                                  >
-                                    {skill}
-                                    <button
-                                      type="button"
-                                      onClick={() => removeSkillFromQuestion(question.id, index)}
-                                      className="ml-2 text-green-600 hover:text-green-800"
-                                    >
-                                      ×
-                                    </button>
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-gray-500 text-sm italic">No skills assigned yet</p>
-                            )}
-                          </div>
-
-                          {/* Manual Skill Assignment */}
-                          <div className="flex items-center space-x-2">
-                            <Input
-                              placeholder="Add custom skill..."
-                              onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  const target = e.target as HTMLInputElement;
-                                  const skill = target.value.trim();
-                                  if (skill && !assignedSkills.includes(skill)) {
-                                    addSkillToQuestion(question.id, skill);
-                                    target.value = '';
-                                  }
-                                }
-                              }}
-                              className="flex-1"
-                            />
-                            <Button
-                              type="button"
-                              onClick={() => markAsReviewed(question.id)}
-                              variant={isReviewed ? "success" : "outline"}
-                              size="sm"
-                            >
-                              {isReviewed ? 'Reviewed' : 'Mark Reviewed'}
-                            </Button>
+                            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                              <p className="text-gray-800 leading-relaxed">{question.question_text}</p>
+                            </div>
                           </div>
                         </div>
-                      </Card>
-                    );
-                  })}
-                </div>
 
-                {/* Save Button */}
-                <div className="flex justify-end pt-6 border-t border-gray-200">
-                  <Button
-                    type="submit"
-                    loading={loading}
-                    disabled={stats.assignedQuestions === 0}
-                    className="flex items-center"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Skill Assignments
-                  </Button>
-                </div>
-              </>
-            )}
+                        {/* AI Analysis Results - Temporarily disabled */}
+                        {false && (
+                          <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                            <h4 className="text-sm font-medium text-blue-900 mb-2">AI Analysis</h4>
+                            <div className="flex items-center space-x-4 text-sm">
+                              <span className="text-blue-700">
+                                Complexity: <span className="font-medium">medium</span>
+                              </span>
+                              <span className="text-blue-700">
+                                Confidence: <span className="font-medium">85%</span>
+                              </span>
+                            </div>
+                          </div>
+                        )}
 
-            {/* No Questions State */}
-            {selectedCourse && selectedQuiz && questions.length === 0 && !loading && (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <AlertCircle className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Questions Found</h3>
-                <p className="text-gray-600">
-                  This quiz doesn't have any questions yet. Add questions in Canvas to assign skills.
-                </p>
+                        {/* AI Suggestions */}
+                        {questionSuggestions.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">AI Suggestions</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {Array.isArray(questionSuggestions) && questionSuggestions.map((skill, index) => (
+                                <button
+                                  key={index}
+                                  type="button"
+                                  onClick={() => addSuggestionToQuestion(question.id, skill)}
+                                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${assignedSkills.includes(skill)
+                                    ? 'bg-green-100 text-green-800 cursor-default'
+                                    : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                    }`}
+                                  disabled={assignedSkills.includes(skill)}
+                                >
+                                  <Lightbulb className="w-3 h-3 inline mr-1" />
+                                  {skill}
+                                  {assignedSkills.includes(skill) && (
+                                    <CheckCircle className="w-3 h-3 inline ml-1" />
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* No AI Suggestions Available */}
+                        {analysisStatus === 'completed' && questionSuggestions.length === 0 && (
+                          <div className="mb-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">AI Suggestions</h4>
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                              <div className="flex items-center">
+                                <AlertCircle className="w-4 h-4 text-yellow-600 mr-2" />
+                                <p className="text-sm text-yellow-800">
+                                  <strong>No AI suggestions available.</strong> The AI analysis completed but didn't return any skill recommendations for this question. This appears to be a backend issue.
+                                </p>
+                              </div>
+                              <p className="text-xs text-yellow-700 mt-2">
+                                You can still assign skills manually using the input field below.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Assigned Skills */}
+                        <div className="mb-4">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">Assigned Skills</h4>
+                          {assignedSkills.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {Array.isArray(assignedSkills) && assignedSkills.map((skill, index) => (
+                                <span
+                                  key={index}
+                                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800"
+                                >
+                                  {skill}
+                                  <button
+                                    type="button"
+                                    onClick={() => removeSkillFromQuestion(question.id, index)}
+                                    className="ml-2 text-green-600 hover:text-green-800"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-sm italic">No skills assigned yet</p>
+                          )}
+                        </div>
+
+                        {/* Manual Skill Assignment */}
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            placeholder="Add custom skill..."
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const target = e.target as HTMLInputElement;
+                                const skill = target.value.trim();
+                                if (skill && !assignedSkills.includes(skill)) {
+                                  addSkillToQuestion(question.id, skill);
+                                  target.value = '';
+                                }
+                              }
+                            }}
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            onClick={() => markAsReviewed(question.id)}
+                            variant={isReviewed ? "success" : "outline"}
+                            size="sm"
+                          >
+                            {isReviewed ? 'Reviewed' : 'Mark Reviewed'}
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
-            )}
-          </form>
-        </Card>
-      </div>
-    );
+
+              {/* Save Button */}
+              <div className="flex justify-end pt-6 border-t border-gray-200">
+                <Button
+                  type="submit"
+                  loading={loading}
+                  disabled={stats.assignedQuestions === 0}
+                  className="flex items-center"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Skill Assignments
+                </Button>
+              </div>
+            </>
+          )}
+
+          {/* No Questions State */}
+          {selectedCourse && selectedQuiz && questions.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Questions Found</h3>
+              <p className="text-gray-600">
+                This quiz doesn't have any questions yet. Add questions in Canvas to assign skills.
+              </p>
+            </div>
+          )}
+        </form>
+      </Card>
+    </div>
+  );
 };
 
 export default SkillAssignmentInterface; 

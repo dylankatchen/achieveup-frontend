@@ -11,6 +11,8 @@ import Settings from './pages/Settings';
 import './index.css';
 import SkillMatrixCreator from './components/SkillMatrixCreator/SkillMatrixCreator';
 import SkillAssignmentInterface from './components/SkillAssignmentInterface/SkillAssignmentInterface';
+import BadgesDashboard from './components/BadgesDashboard/BadgesDashboard';
+import StudentBadgesTest from './components/StudentBadgesTest/StudentBadgesTest';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -71,7 +73,7 @@ const StudentProgress: React.FC = () => {
       const { canvasInstructorAPI } = await import('./services/api');
       const response = await canvasInstructorAPI.getInstructorCourses();
       setCourses(response.data);
-      
+
       // Auto-select first course if available
       if (response.data.length > 0) {
         setSelectedCourse(response.data[0].id);
@@ -88,10 +90,10 @@ const StudentProgress: React.FC = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       const { instructorAPI } = await import('./services/api');
       const response = await instructorAPI.getCourseStudentAnalytics(courseId);
-      
+
       // Check if we have actual student data
       if (response.data && response.data.students && response.data.students.length > 0) {
         // Transform the API response to match our new interface
@@ -100,7 +102,7 @@ const StudentProgress: React.FC = () => {
           students: response.data.students.map((student: any) => {
             // Extract top 3 skills from skillBreakdown if it exists
             let topSkills: Array<{ skill: string; score: number; level: string }> = [];
-            
+
             if (student.skillBreakdown) {
               topSkills = Object.entries(student.skillBreakdown)
                 .map(([skill, data]: [string, any]) => ({
@@ -111,7 +113,7 @@ const StudentProgress: React.FC = () => {
                 .sort((a, b) => b.score - a.score) // Sort by score descending
                 .slice(0, 3); // Take top 3
             }
-            
+
             return {
               id: student.id,
               name: student.name,
@@ -123,7 +125,7 @@ const StudentProgress: React.FC = () => {
             };
           })
         };
-        
+
         setStudentData(transformedData);
       } else {
         // API succeeded but no students - this means we need to set up skill matrix and assignments
@@ -318,11 +320,10 @@ const StudentProgress: React.FC = () => {
                                 <span className="text-sm text-gray-900 font-medium">{skill.skill}</span>
                                 <div className="flex items-center space-x-2">
                                   <span className="text-xs text-gray-600">{skill.score}%</span>
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                    skill.level === 'advanced' ? 'bg-green-100 text-green-800' :
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${skill.level === 'advanced' ? 'bg-green-100 text-green-800' :
                                     skill.level === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-gray-100 text-gray-800'
-                                  }`}>
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
                                     {skill.level}
                                   </span>
                                 </div>
@@ -388,6 +389,9 @@ const StudentProgress: React.FC = () => {
               </div>
             </div>
           )}
+          <div>
+            <BadgesDashboard courseId={selectedCourse} />
+          </div>
         </>
       )}
 
@@ -401,7 +405,7 @@ const StudentProgress: React.FC = () => {
           <p className="text-gray-600 mb-6">
             Student progress tracking requires completing the skill mapping workflow first.
           </p>
-          
+
           <div className="max-w-md mx-auto bg-blue-50 rounded-lg p-6 mb-6">
             <h3 className="text-lg font-medium text-blue-900 mb-4">Complete Setup Steps:</h3>
             <div className="space-y-4 text-left">
@@ -473,7 +477,7 @@ const StudentProgress: React.FC = () => {
                 </svg>
               </button>
             </div>
-            
+
             <div className="p-6">
               {/* Student Overview */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -488,7 +492,7 @@ const StudentProgress: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-purple-50 rounded-lg p-4">
                   <div className="flex items-center">
                     <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -500,32 +504,28 @@ const StudentProgress: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
-                <div className={`rounded-lg p-4 ${
-                  selectedStudent.riskLevel === 'low' ? 'bg-green-50' :
+
+                <div className={`rounded-lg p-4 ${selectedStudent.riskLevel === 'low' ? 'bg-green-50' :
                   selectedStudent.riskLevel === 'medium' ? 'bg-yellow-50' : 'bg-red-50'
-                }`}>
+                  }`}>
                   <div className="flex items-center">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      selectedStudent.riskLevel === 'low' ? 'bg-green-100' :
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${selectedStudent.riskLevel === 'low' ? 'bg-green-100' :
                       selectedStudent.riskLevel === 'medium' ? 'bg-yellow-100' : 'bg-red-100'
-                    }`}>
+                      }`}>
                       {getRiskIcon(selectedStudent.riskLevel)}
                     </div>
                     <div className="ml-3">
-                      <p className={`text-sm font-medium ${
-                        selectedStudent.riskLevel === 'low' ? 'text-green-900' :
+                      <p className={`text-sm font-medium ${selectedStudent.riskLevel === 'low' ? 'text-green-900' :
                         selectedStudent.riskLevel === 'medium' ? 'text-yellow-900' : 'text-red-900'
-                      }`}>
+                        }`}>
                         Risk Level: {selectedStudent.riskLevel}
                       </p>
-                      <p className={`text-xs ${
-                        selectedStudent.riskLevel === 'low' ? 'text-green-600' :
+                      <p className={`text-xs ${selectedStudent.riskLevel === 'low' ? 'text-green-600' :
                         selectedStudent.riskLevel === 'medium' ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
+                        }`}>
                         {selectedStudent.riskLevel === 'low' ? 'Performing well across most skills' :
-                         selectedStudent.riskLevel === 'medium' ? 'Some areas need attention' :
-                         'Multiple skills need significant improvement'}
+                          selectedStudent.riskLevel === 'medium' ? 'Some areas need attention' :
+                            'Multiple skills need significant improvement'}
                       </p>
                     </div>
                   </div>
@@ -543,26 +543,24 @@ const StudentProgress: React.FC = () => {
                           <h4 className="text-md font-medium text-gray-900">{skillName}</h4>
                           <div className="flex items-center space-x-3">
                             <span className="text-lg font-semibold text-gray-900">{skillData.score}%</span>
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              skillData.level === 'advanced' ? 'bg-green-100 text-green-800' :
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${skillData.level === 'advanced' ? 'bg-green-100 text-green-800' :
                               skillData.level === 'intermediate' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
+                                'bg-gray-100 text-gray-800'
+                              }`}>
                               {skillData.level}
                             </span>
                           </div>
                         </div>
-                        
+
                         <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-                          <div 
-                            className={`h-2 rounded-full ${
-                              skillData.score >= 80 ? 'bg-green-500' :
+                          <div
+                            className={`h-2 rounded-full ${skillData.score >= 80 ? 'bg-green-500' :
                               skillData.score >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                            }`}
+                              }`}
                             style={{ width: `${skillData.score}%` }}
                           ></div>
                         </div>
-                        
+
                         <div className="flex justify-between text-sm text-gray-600">
                           <span>Questions attempted: {skillData.questionsAttempted}</span>
                           <span>Correct answers: {skillData.questionsCorrect}</span>
@@ -632,6 +630,13 @@ const AppRoutes: React.FC = () => {
         <ProtectedRoute>
           <Layout>
             <Settings />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/badges-test" element={
+        <ProtectedRoute>
+          <Layout>
+            <StudentBadgesTest />
           </Layout>
         </ProtectedRoute>
       } />
