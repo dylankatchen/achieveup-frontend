@@ -151,7 +151,7 @@ export const canvasAPI = {
   getInstructorQuizzes: (courseId: string): Promise<AxiosResponse<CanvasQuiz[]>> =>
     api.get(`/canvas/instructor/courses/${courseId}/quizzes`),
   getInstructorQuestions: (quizId: string, courseId: string): Promise<AxiosResponse<CanvasQuestion[]>> =>
-    api.get(`/canvas/instructor/quizzes/${quizId}/questions?course_id=${courseId}`),
+    api.get(`/canvas/instructor/courses/${courseId}/quizzes/${quizId}/questions`),
 };
 
 // Authentication

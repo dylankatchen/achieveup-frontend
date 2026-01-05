@@ -314,7 +314,7 @@ const SkillAssignmentInterface: React.FC = () => {
   const loadQuizzes = useCallback(async (courseId: string): Promise<void> => {
     try {
       setLoading(true);
-
+      
       const response = isInstructor
         ? await canvasAPI.getInstructorQuizzes(courseId)
         : await canvasAPI.getQuizzes(courseId);
@@ -595,7 +595,7 @@ const SkillAssignmentInterface: React.FC = () => {
     ];
   };
 
-  const loadQuestions = useCallback(async (quizId: string, courseId: string): Promise<void> => {
+  const loadQuestions = useCallback(async (quizId: string, selectedCourse: string): Promise<void> => {
     try {
       setLoading(true);
       const response = isInstructor
