@@ -314,7 +314,7 @@ const SkillAssignmentInterface: React.FC = () => {
   const loadQuizzes = useCallback(async (courseId: string): Promise<void> => {
     try {
       setLoading(true);
-      
+
       const response = isInstructor
         ? await canvasAPI.getInstructorQuizzes(courseId)
         : await canvasAPI.getQuizzes(courseId);
@@ -1149,7 +1149,7 @@ const SkillAssignmentInterface: React.FC = () => {
                   <div className="mb-4">
                     <h5 className="text-xs font-medium text-gray-700 mb-2">Quick Assign from Matrix:</h5>
                     <div className="flex flex-wrap gap-2">
-                      {getMatrixSkills().slice(0, 6).map((skill: string, index: number) => (
+                      {getMatrixSkills().map((skill: string, index: number) => (
                         <button
                           key={index}
                           type="button"
@@ -1159,11 +1159,6 @@ const SkillAssignmentInterface: React.FC = () => {
                           {skill}
                         </button>
                       ))}
-                      {getMatrixSkills().length > 6 && (
-                        <span className="text-xs text-gray-500 px-2 py-1">
-                          +{getMatrixSkills().length - 6} more in matrix
-                        </span>
-                      )}
                     </div>
                   </div>
                 )}
@@ -1294,6 +1289,24 @@ const SkillAssignmentInterface: React.FC = () => {
                               <p className="text-xs text-yellow-700 mt-2">
                                 You can still assign skills manually using the input field below.
                               </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedMatrixData && (
+                          <div className="mb-4">
+                            <h5 className="text-xs font-medium text-gray-700 mb-2">Quick Assign from Matrix:</h5>
+                            <div className="flex flex-wrap gap-2">
+                              {getMatrixSkills().map((skill: string, index: number) => (
+                                <button
+                                  key={index}
+                                  type="button"
+                                  onClick={() => addSuggestionToQuestion(question.id, skill)}
+                                  className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full hover:bg-blue-200 transition-colors"
+                                >
+                                  {skill}
+                                </button>
+                              ))}
                             </div>
                           </div>
                         )}
