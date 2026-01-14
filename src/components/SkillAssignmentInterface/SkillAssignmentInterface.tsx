@@ -605,6 +605,22 @@ const SkillAssignmentInterface: React.FC = () => {
       setQuestions(response.data);
       setSelectedQuiz(quizId);
 
+      // Pull assigned skills from AchieveUp DB
+      const questionIds = response.data.map((q: CanvasQuestion) => String(q.id));
+
+      const params = new URLSearchParams({ course_id: String(selectedCourse) });
+      questionIds.forEach(id => params.append('question_id', id));
+
+      const skillsResponse = await skillAssignmentAPI.getAssignments(
+        selectedCourse,
+        questionIds
+      );
+
+      // Expected shape:
+      // { question_skills: { [questionId]: string[] } }
+      const savedSkills = skillsResponse.data?.question_skills || {};
+
+
       // Initialize question skills and status
       const initialSkills: QuestionSkills = {};
       const initialStatus: AIAnalysisStatus = {};
@@ -614,7 +630,7 @@ const SkillAssignmentInterface: React.FC = () => {
 
 
       response.data.forEach((question: CanvasQuestion) => {
-        initialSkills[question.id] = [];
+        initialSkills[question.id] = savedSkills[String(question.id)] ?? [];
         initialStatus[question.id] = 'pending';
         initialReviewStatus[question.id] = false;
       });
