@@ -86,15 +86,15 @@ export const skillAssignmentAPI = {
     api.post('/achieveup/skills/assign', data),
   suggest: (data: SkillSuggestionRequest): Promise<AxiosResponse<string[]>> =>
     api.post('/achieveup/skills/suggest', data),
-  analyzeQuestions: (data: { courseId: string; quizId: string; questions: any[] }): Promise<AxiosResponse<any[]>> =>
-    api.post('/achieveup/ai/analyze-questions', { courseId: data.courseId, quizId: data.quizId, questions: data.questions }),
+  analyzeQuestions: (data: { courseId: string; quizId: string; matrixId?: string; questions: any[] }): Promise<AxiosResponse<any[]>> =>
+    api.post('/achieveup/ai/analyze-questions', { courseId: data.courseId, quizId: data.quizId, matrixId: data.matrixId, questions: data.questions }),
   bulkAssignWithAI: (data: { courseId: string; quizId: string }): Promise<AxiosResponse<any>> =>
     api.post('/achieveup/ai/bulk-assign', data),
   getAssignments: (courseId: string, questionIds: string[]): Promise<AxiosResponse<{ question_skills: Record<string, string[]> }>> => {
-  const params = new URLSearchParams({ course_id: courseId });
-  questionIds.forEach(id => params.append('question_id', id));
-  return api.get(`/achieveup/skills/assignments?${params.toString()}`);
-},
+    const params = new URLSearchParams({ course_id: courseId });
+    questionIds.forEach(id => params.append('question_id', id));
+    return api.get(`/achieveup/skills/assignments?${params.toString()}`);
+  },
 };
 
 // Badge Management

@@ -56,6 +56,13 @@ interface HumanReviewStatus {
   [questionId: string]: boolean;
 }
 
+function extractTextFromHTML(htmlString: string) {
+  if (!htmlString) return '';
+  var div = document.createElement('div');
+  div.innerHTML = htmlString;
+  return div.textContent || div.innerText || '';
+}
+
 const SkillAssignmentInterface: React.FC = () => {
   const { user } = useAuth();
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
@@ -92,11 +99,7 @@ const SkillAssignmentInterface: React.FC = () => {
 
   const isInstructor = user?.canvasTokenType === 'instructor';
 
-  function extractTextFromHTML(htmlString: string) {
-    var div = document.createElement('div');
-    div.innerHTML = htmlString;
-    return div.textContent || div.innerText; // textContent is preferred
-  }
+
 
   // Backend AI analysis for all questions
   const analyzeQuestionsWithAI = useCallback(async (questions: CanvasQuestion[]): Promise<void> => {
@@ -117,6 +120,7 @@ const SkillAssignmentInterface: React.FC = () => {
       const requestData = {
         courseId: selectedCourse,
         quizId: selectedQuiz,
+        matrixId: selectedMatrix,
         questions: questions.map(q => ({
           id: q.id,
           text: extractTextFromHTML(q.question_text),
@@ -144,7 +148,7 @@ const SkillAssignmentInterface: React.FC = () => {
 
       // Set any remaining questions to completed (in case response is incomplete)
       questions.forEach(q => {
-        q.question_text = extractTextFromHTML(q.question_text);
+        // q.question_text is already sanitized on load
         if (!completedStatus[q.id]) {
           completedStatus[q.id] = 'completed';
           if (!newSuggestions[q.id]) {
@@ -193,7 +197,7 @@ const SkillAssignmentInterface: React.FC = () => {
       setAutoAnalysisInProgress(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInstructor, selectedCourse, selectedQuiz]);
+  }, [isInstructor, selectedCourse, selectedQuiz, selectedMatrix]);
 
   // Generate intelligent mock suggestions based on question content and available skills
   const generateMockQuestionSuggestions = (questions: CanvasQuestion[]): Suggestions => {
@@ -602,7 +606,11 @@ const SkillAssignmentInterface: React.FC = () => {
         ? await canvasAPI.getInstructorQuestions(quizId, selectedCourse)
         : await canvasAPI.getQuestions(quizId);
 
-      setQuestions(response.data);
+      const sanitizedQuestions = response.data.map((q: CanvasQuestion) => ({
+        ...q,
+        question_text: extractTextFromHTML(q.question_text)
+      }));
+      setQuestions(sanitizedQuestions);
       setSelectedQuiz(quizId);
 
       // Pull assigned skills from AchieveUp DB
@@ -1219,6 +1227,8 @@ const SkillAssignmentInterface: React.FC = () => {
                   const assignedSkills = questionSkills[question.id] || [];
                   const analysisStatus = aiAnalysisStatus[question.id] || 'pending';
                   const isReviewed = humanReviewStatus[question.id] || false;
+                  let questionNumber = 0;
+                  questionNumber++;
 
                   return (
                     <Card key={question.id} className="overflow-hidden">
@@ -1227,7 +1237,7 @@ const SkillAssignmentInterface: React.FC = () => {
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex-1">
                             <div className="flex items-center mb-2">
-                              <h3 className="text-lg font-medium text-gray-900">Question {question.id}</h3>
+                              <h3 className="text-lg font-medium text-gray-900">Question {questionNumber}</h3>
                               {analysisStatus === 'analyzing' && (
                                 <Clock className="w-4 h-4 text-blue-500 ml-2 animate-spin" />
                               )}
