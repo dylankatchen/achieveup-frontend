@@ -36,132 +36,133 @@ const BadgesDashboard: React.FC<BadgesDashboardProps> = ({ courseId }) => {
 
 
 
-    const loadBadges = async () => {
-        try {
-            setLoading(true);
-
-            // Fetch skill matrix for the course to get all skills
-            const skillMatrixResponse = await skillMatrixAPI.getAllByCourse(courseId);
-            const skillMatrices = skillMatrixResponse.data;
-
-            if (!skillMatrices || skillMatrices.length === 0) {
-                console.log('No skill matrix found for course');
-                setBadges([]);
-                setLoading(false);
-                return;
-            }
-
-            // Get all skills from all matrices
-            const allSkills: string[] = [];
-            skillMatrices.forEach(matrix => {
-                if (matrix.skills && Array.isArray(matrix.skills)) {
-                    allSkills.push(...matrix.skills);
-                }
-            });
-
-            // Remove duplicates
-            const uniqueSkills = Array.from(new Set(allSkills));
-
-            // Fetch student analytics to get skill progress data
-            let studentAnalytics: any = null;
-            try {
-                const analyticsResponse = await instructorAPI.getCourseStudentAnalytics(courseId);
-                studentAnalytics = analyticsResponse.data;
-            } catch (error) {
-                console.log('Could not load student analytics:', error);
-                // If we can't load analytics, create badges with no student data
-                const emptyBadges: BadgeData[] = uniqueSkills.map((skillName, index) => ({
-                    id: `badge-${index}`,
-                    name: `${skillName} Badge`,
-                    description: `Awarded for demonstrating proficiency in ${skillName}`,
-                    skill_name: skillName,
-                    level: 'intermediate',
-                    badge_type: 'skill',
-                    studentsEarned: [],
-                    studentsNotEarned: []
-                }));
-                setBadges(emptyBadges);
-                setLoading(false);
-                return;
-            }
-
-            // Create a badge for each skill
-            const skillBadges: BadgeData[] = uniqueSkills.map((skillName, index) => {
-                // Determine badge level based on skill name or index
-                let level: 'beginner' | 'intermediate' | 'advanced' = 'intermediate';
-                const skillLower = skillName.toLowerCase();
-
-                if (skillLower.includes('basic') || skillLower.includes('intro') || skillLower.includes('fundamental')) {
-                    level = 'beginner';
-                } else if (skillLower.includes('advanced') || skillLower.includes('expert') || skillLower.includes('master')) {
-                    level = 'advanced';
-                }
-
-                // Process student data for this skill
-                const studentsEarned: StudentBadgeStatus[] = [];
-                const studentsNotEarned: StudentBadgeStatus[] = [];
-
-                if (studentAnalytics && studentAnalytics.students) {
-                    studentAnalytics.students.forEach((student: any) => {
-                        // Check if student has skill breakdown data
-                        if (student.skillBreakdown && student.skillBreakdown[skillName]) {
-                            const skillData = student.skillBreakdown[skillName];
-                            const skillScore = skillData.score || 0;
-                            const hasEarned = skillScore >= 80; // Badge earned at 80% or higher
-
-                            const studentStatus: StudentBadgeStatus = {
-                                id: student.id,
-                                name: student.name,
-                                earned: hasEarned,
-                                progress: skillScore,
-                                skillScore: skillScore,
-                                earnedAt: hasEarned ? new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString() : undefined
-                            };
-
-                            if (hasEarned) {
-                                studentsEarned.push(studentStatus);
-                            } else {
-                                studentsNotEarned.push(studentStatus);
-                            }
-                        } else {
-                            // Student hasn't attempted this skill yet
-                            studentsNotEarned.push({
-                                id: student.id,
-                                name: student.name,
-                                earned: false,
-                                progress: 0,
-                                skillScore: 0
-                            });
-                        }
-                    });
-                }
-
-                return {
-                    id: `badge-${index}`,
-                    name: `${skillName} Badge`,
-                    description: `Awarded for demonstrating proficiency in ${skillName}`,
-                    skill_name: skillName,
-                    level: level,
-                    badge_type: 'skill',
-                    studentsEarned: studentsEarned,
-                    studentsNotEarned: studentsNotEarned
-                };
-            });
-
-            setBadges(skillBadges);
-
-        } catch (error) {
-            console.error('Error loading badges:', error);
-            toast.error('Failed to load badges');
-            setBadges([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
+        const loadBadges = async () => {
+            try {
+                setLoading(true);
+
+                // Fetch skill matrix for the course to get all skills
+                const skillMatrixResponse = await skillMatrixAPI.getAllByCourse(courseId);
+                const skillMatrices = skillMatrixResponse.data;
+
+                if (!skillMatrices || skillMatrices.length === 0) {
+                    console.log('No skill matrix found for course');
+                    setBadges([]);
+                    setLoading(false);
+                    return;
+                }
+
+                // Get all skills from all matrices
+                const allSkills: string[] = [];
+                skillMatrices.forEach(matrix => {
+                    if (matrix.skills && Array.isArray(matrix.skills)) {
+                        allSkills.push(...matrix.skills);
+                    }
+                });
+
+                // Remove duplicates
+                const uniqueSkills = Array.from(new Set(allSkills));
+
+                // Fetch student analytics to get skill progress data
+                let studentAnalytics: any = null;
+                try {
+                    const analyticsResponse = await instructorAPI.getCourseStudentAnalytics(courseId);
+                    studentAnalytics = analyticsResponse.data;
+                } catch (error) {
+                    console.log('Could not load student analytics:', error);
+                    // If we can't load analytics, create badges with no student data
+                    const emptyBadges: BadgeData[] = uniqueSkills.map((skillName, index) => ({
+                        id: `badge-${index}`,
+                        name: `${skillName} Badge`,
+                        description: `Awarded for demonstrating proficiency in ${skillName}`,
+                        skill_name: skillName,
+                        level: 'intermediate',
+                        badge_type: 'skill',
+                        studentsEarned: [],
+                        studentsNotEarned: []
+                    }));
+                    setBadges(emptyBadges);
+                    setLoading(false);
+                    return;
+                }
+
+                // Create a badge for each skill
+                const skillBadges: BadgeData[] = uniqueSkills.map((skillName, index) => {
+                    // Determine badge level based on skill name or index
+                    let level: 'beginner' | 'intermediate' | 'advanced' = 'intermediate';
+                    const skillLower = skillName.toLowerCase();
+
+                    if (skillLower.includes('basic') || skillLower.includes('intro') || skillLower.includes('fundamental')) {
+                        level = 'beginner';
+                    } else if (skillLower.includes('advanced') || skillLower.includes('expert') || skillLower.includes('master')) {
+                        level = 'advanced';
+                    }
+
+                    // Process student data for this skill
+                    const studentsEarned: StudentBadgeStatus[] = [];
+                    const studentsNotEarned: StudentBadgeStatus[] = [];
+
+                    if (studentAnalytics && studentAnalytics.students) {
+                        studentAnalytics.students.forEach((student: any) => {
+                            // Check if student has skill breakdown data
+                            if (student.skillBreakdown && student.skillBreakdown[skillName]) {
+                                const skillData = student.skillBreakdown[skillName];
+                                const skillScore = skillData.score || 0;
+                                const hasEarned = skillScore >= 80; // Badge earned at 80% or higher
+
+                                const studentStatus: StudentBadgeStatus = {
+                                    id: student.id,
+                                    name: student.name,
+                                    earned: hasEarned,
+                                    progress: skillScore,
+                                    skillScore: skillScore,
+                                    earnedAt: hasEarned ? new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString() : undefined
+                                };
+
+                                if (hasEarned) {
+                                    studentsEarned.push(studentStatus);
+                                } else {
+                                    studentsNotEarned.push(studentStatus);
+                                }
+                            } else {
+                                // Student hasn't attempted this skill yet
+                                studentsNotEarned.push({
+                                    id: student.id,
+                                    name: student.name,
+                                    earned: false,
+                                    progress: 0,
+                                    skillScore: 0
+                                });
+                            }
+                        });
+                    }
+
+                    return {
+                        id: `badge-${index}`,
+                        name: `${skillName} Badge`,
+                        description: `Awarded for demonstrating proficiency in ${skillName}`,
+                        skill_name: skillName,
+                        level: level,
+                        badge_type: 'skill',
+                        studentsEarned: studentsEarned,
+                        studentsNotEarned: studentsNotEarned
+                    };
+                });
+
+                setBadges(skillBadges);
+
+            } catch (error) {
+                console.error('Error loading badges:', error);
+                toast.error('Failed to load badges');
+                setBadges([]);
+            } finally {
+                setLoading(false);
+            }
+        };
         loadBadges();
     }, []);
+
+
 
     const getProgressColor = (progress: number) => {
         if (progress >= 90) return 'bg-green-500';
