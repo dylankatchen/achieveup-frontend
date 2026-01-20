@@ -160,7 +160,7 @@ const BadgesDashboard: React.FC<BadgesDashboardProps> = ({ courseId }) => {
             }
         };
         loadBadges();
-    }, []);
+    }, [courseId]);
 
 
 
