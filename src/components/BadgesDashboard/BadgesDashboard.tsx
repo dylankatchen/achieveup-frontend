@@ -35,10 +35,8 @@ const BadgesDashboard: React.FC<BadgesDashboardProps> = ({ courseId }) => {
     const [showEarned, setShowEarned] = useState(true);
 
     useEffect(() => {
-        if (courseId) {
-            loadBadges();
-        }
-    }, [courseId]);
+        loadBadges();
+    }, []);
 
     const loadBadges = async () => {
         try {
