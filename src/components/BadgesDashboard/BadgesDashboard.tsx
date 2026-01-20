@@ -34,9 +34,7 @@ const BadgesDashboard: React.FC<BadgesDashboardProps> = ({ courseId }) => {
     const [selectedBadge, setSelectedBadge] = useState<string | null>(null);
     const [showEarned, setShowEarned] = useState(true);
 
-    useEffect(() => {
-        loadBadges();
-    }, []);
+
 
     const loadBadges = async () => {
         try {
@@ -161,9 +159,9 @@ const BadgesDashboard: React.FC<BadgesDashboardProps> = ({ courseId }) => {
         }
     };
 
-
-
-
+    useEffect(() => {
+        loadBadges();
+    }, [loadBadges]);
 
     const getProgressColor = (progress: number) => {
         if (progress >= 90) return 'bg-green-500';
