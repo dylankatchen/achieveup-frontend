@@ -161,7 +161,7 @@ const BadgesDashboard: React.FC<BadgesDashboardProps> = ({ courseId }) => {
 
     useEffect(() => {
         loadBadges();
-    }, [loadBadges]);
+    }, []);
 
     const getProgressColor = (progress: number) => {
         if (progress >= 90) return 'bg-green-500';
