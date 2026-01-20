@@ -657,7 +657,7 @@ const SkillAssignmentInterface: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [isInstructor, analyzeQuestionsWithAI, selectedCourse]);
+  }, [isInstructor, analyzeQuestionsWithAI]);
 
   useEffect(() => {
     loadCourses();
@@ -673,7 +673,7 @@ const SkillAssignmentInterface: React.FC = () => {
     if (watchedQuiz) {
       loadQuestions(watchedQuiz, watchedCourse);
     }
-  }, [watchedQuiz, loadQuestions]);
+  }, [watchedQuiz, loadQuestions, watchedCourse]);
 
   const addSkillToQuestion = (questionId: string, skill: string): void => {
     setQuestionSkills(prev => ({
