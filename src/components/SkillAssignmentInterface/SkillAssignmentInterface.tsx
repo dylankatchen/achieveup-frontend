@@ -1221,14 +1221,13 @@ const SkillAssignmentInterface: React.FC = () => {
 
               {/* Questions List */}
               <div className="space-y-6">
-                {Array.isArray(filteredQuestions) && filteredQuestions.map((question) => {
+                {Array.isArray(filteredQuestions) && filteredQuestions.map((question, index) => {
                   // const questionAnalysisData = questionAnalysis.find(a => a.questionId === question.id);
                   const questionSuggestions = suggestions[question.id] || [];
                   const assignedSkills = questionSkills[question.id] || [];
                   const analysisStatus = aiAnalysisStatus[question.id] || 'pending';
                   const isReviewed = humanReviewStatus[question.id] || false;
-                  let questionNumber = 0;
-                  questionNumber++;
+                  const questionNumber = index + 1;
 
                   return (
                     <Card key={question.id} className="overflow-hidden">
