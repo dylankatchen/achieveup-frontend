@@ -1394,18 +1394,6 @@ const SkillAssignmentInterface: React.FC = () => {
                 })}
               </div>
 
-              {/* Save Button */}
-              <div className="flex justify-end pt-6 border-t border-gray-200">
-                <Button
-                  type="submit"
-                  loading={loading}
-                  disabled={stats.assignedQuestions === 0}
-                  className="flex items-center"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Skill Assignments
-                </Button>
-              </div>
             </>
           )}
 
@@ -1422,7 +1410,29 @@ const SkillAssignmentInterface: React.FC = () => {
             </div>
           )}
         </form>
+        
       </Card>
+      {/* Save Button */}
+              {selectedQuiz && questions.length > 0 && (
+                <div className="sticky bottom-4 z-40">
+                  <div className="max-w-7xl mx-auto">
+                    <div className="bg-white rounded-xl shadow-lg border border-gray-200">
+                      <div className="flex justify-end p-4">
+                        <Button
+                          type="button"
+                          onClick={handleSubmit(onSubmit)}
+                          loading={loading}
+                          disabled={stats.assignedQuestions === 0}
+                          className="flex items-center"
+                        >
+                          <Save className="w-4 h-4 mr-2" />
+                          Save Skill Assignments
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
     </div>
   );
 };
