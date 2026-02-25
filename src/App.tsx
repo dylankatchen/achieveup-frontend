@@ -47,6 +47,7 @@ const StudentProgress: React.FC = () => {
       riskLevel: 'low' | 'medium' | 'high';
       topSkills: Array<{ skill: string; score: number; level: string }>;
       skillBreakdown?: Record<string, { score: number; level: string; questionsAttempted: number; questionsCorrect: number }>;
+      totalQuestionsAttempted?: number;
     }>;
     skillDistribution: Record<string, number>;
     averageScores: Record<string, number>;
@@ -348,7 +349,7 @@ const StudentProgress: React.FC = () => {
                         {student.skillBreakdown && (
                           <div className="text-xs text-gray-500 mt-1">
                             {Object.keys(student.skillBreakdown).length > 0 && (
-                              <span>Based on {Object.values(student.skillBreakdown).reduce((acc, skill) => acc + skill.questionsAttempted, 0)} questions</span>
+                              <span>Based on {student.totalQuestionsAttempted || 0} questions</span>
                             )}
                           </div>
                         )}
