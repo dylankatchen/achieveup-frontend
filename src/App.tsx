@@ -122,7 +122,8 @@ const StudentProgress: React.FC = () => {
               badgesEarned: student.badgesEarned || 0,
               riskLevel: student.riskLevel || 'medium',
               topSkills,
-              skillBreakdown: student.skillBreakdown || {}
+              skillBreakdown: student.skillBreakdown || {},
+              totalQuestionsAttempted: student.totalQuestionsAttempted
             };
           })
         };
