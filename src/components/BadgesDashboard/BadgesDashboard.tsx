@@ -41,33 +41,37 @@ const BadgesDashboard: React.FC<BadgesDashboardProps> = ({ courseId }) => {
             try {
                 setLoading(true);
 
-                // Fetch skill matrix for the course to get all skills
-                const skillMatrixResponse = await skillMatrixAPI.getAllByCourse(courseId);
-                const skillMatrices = skillMatrixResponse.data;
+                // Fetch student analytics first
+                let studentAnalytics: any = null;
+                const analyticsResponse = await instructorAPI.getCourseStudentAnalytics(courseId);
+                // The backend /student-analytics route returns the analytics object directly
+                studentAnalytics = analyticsResponse.data.analytics || analyticsResponse.data;
 
-                if (!skillMatrices || skillMatrices.length === 0) {
-                    console.log('No skill matrix found for course');
+                if (!studentAnalytics || !studentAnalytics.students || studentAnalytics.students.length === 0) {
+                    console.log('No student analytics found for course');
                     setBadges([]);
                     setLoading(false);
                     return;
                 }
 
-                // Get all skills from all matrices
+                // Get all unique skills by inspecting all students' skill breakdowns
                 const allSkills: string[] = [];
-                skillMatrices.forEach(matrix => {
-                    if (matrix.skills && Array.isArray(matrix.skills)) {
-                        allSkills.push(...matrix.skills);
+                studentAnalytics.students.forEach((student: any) => {
+                    if (student.skillBreakdown) {
+                        allSkills.push(...Object.keys(student.skillBreakdown));
                     }
                 });
 
                 // Remove duplicates
                 const uniqueSkills = Array.from(new Set(allSkills));
 
-                // Fetch student analytics to get skill progress data
-                let studentAnalytics: any = null;
+                if (uniqueSkills.length === 0) {
+                    setBadges([]);
+                    setLoading(false);
+                    return;
+                }
+
                 try {
-                    const analyticsResponse = await instructorAPI.getCourseStudentAnalytics(courseId);
-                    studentAnalytics = analyticsResponse.data;
                 } catch (error) {
                     console.log('Could not load student analytics:', error);
                     // If we can't load analytics, create badges with no student data

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { Download, Filter, TrendingUp, Users, Target, Award, BarChart3, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Download, Filter, TrendingUp, Users, Target, Award, BarChart3, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 import { analyticsAPI, instructorAPI, canvasInstructorAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import Card from '../common/Card';
@@ -60,29 +60,32 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
   });
 
   const isInstructor = user?.canvasTokenType === 'instructor';
+  const [syncing, setSyncing] = useState<boolean>(false);
 
   const loadAnalyticsData = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
-      
+
       if (isInstructor && selectedCourse) {
         // Load instructor-specific analytics
         const [courseAnalytics, studentData] = await Promise.all([
           instructorAPI.getCourseStudentAnalytics(selectedCourse),
           analyticsAPI.getIndividualGraphs(selectedCourse)
         ]);
-        
-        setStudentAnalytics(courseAnalytics.data);
+
+        const studentAnalyticsData = courseAnalytics.data.analytics;
+
+        setStudentAnalytics(studentAnalyticsData);
         setData({
           performance: studentData.data.performance || [],
           distribution: studentData.data.distribution || [],
           trends: studentData.data.trends || [],
           radar: studentData.data.radar || [],
           summary: {
-            totalStudents: courseAnalytics.data.students.length,
-            averageScore: courseAnalytics.data.students.reduce((acc, s) => acc + s.progress, 0) / courseAnalytics.data.students.length || 0,
-            badgesEarned: courseAnalytics.data.students.reduce((acc, s) => acc + s.badgesEarned, 0),
-            skillsTracked: Object.keys(courseAnalytics.data.skillDistribution).length
+            totalStudents: studentAnalyticsData.students.length,
+            averageScore: studentAnalyticsData.students.reduce((acc, s) => acc + s.progress, 0) / studentAnalyticsData.students.length || 0,
+            badgesEarned: studentAnalyticsData.students.reduce((acc, s) => acc + s.badgesEarned, 0),
+            skillsTracked: Object.keys(studentAnalyticsData.skillDistribution).length
           }
         });
       } else {
@@ -101,7 +104,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
           }
         });
       }
-      
+
     } catch (error) {
       console.error('Error loading analytics data:', error);
       // Set empty data when API fails
@@ -155,7 +158,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
   const exportData = async (): Promise<void> => {
     try {
       const response = await analyticsAPI.exportCourseData(selectedCourse || courseId);
-      
+
       // Create and download CSV file
       const csvContent = convertToCSV(response.data);
       const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -165,7 +168,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
       a.download = `analytics-${selectedCourse || courseId}-${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
       window.URL.revokeObjectURL(url);
-      
+
       toast.success('Data exported successfully');
     } catch (error) {
       console.error('Error exporting data:', error);
@@ -182,7 +185,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
       ['Total Skills', data.totalSkills || 0],
       ['Badges Awarded', data.badgesAwarded || 0],
     ];
-    
+
     return [headers, ...rows].map(row => row.join(',')).join('\n');
   };
 
@@ -211,19 +214,64 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
   if (!hasData) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Course Selection for Instructors */}
+        {isInstructor && (
+          <div className="mb-8 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center gap-4">
+              <Target className="w-5 h-5 text-gray-500" />
+              <select
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
+              >
+                <option value="">Select a course</option>
+                {courses.map(course => (
+                  <option key={course.id} value={course.id}>
+                    {course.name}
+                  </option>
+                ))}
+              </select>
+              {selectedCourse && (
+                <Button
+                  onClick={async () => {
+                    setSyncing(true);
+                    try {
+                      const result = await instructorAPI.forceSyncCourse(selectedCourse);
+                      toast.success(
+                        `Sync complete! ${result.data.details.progress_synced} students updated.`
+                      );
+                      await loadAnalyticsData();
+                    } catch (error) {
+                      console.error('Force sync error:', error);
+                      toast.error('Failed to sync data. Please try again.');
+                    } finally {
+                      setSyncing(false);
+                    }
+                  }}
+                  className="flex items-center gap-2"
+                  disabled={syncing}
+                >
+                  <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+                  {syncing ? 'Syncing...' : 'Sync Now'}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <BarChart3 className="w-8 h-8 text-gray-400" />
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">No Analytics Data Available</h2>
           <p className="text-gray-600 mb-4">
-            {isInstructor 
-              ? 'Analytics data will appear here once you select a course and have student data.'
+            {isInstructor
+              ? 'Select a course above, assign skills to questions, then click Sync Now to populate analytics.'
               : 'Analytics data will appear here once the backend endpoints are implemented and you have course data.'
             }
           </p>
           <p className="text-sm text-gray-500">
-            {isInstructor 
+            {isInstructor
               ? 'This feature requires: Canvas integration, skill matrices, and student progress data.'
               : 'This feature requires: Canvas integration, skill matrices, and student progress data.'
             }
@@ -235,8 +283,33 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Export Button */}
-      <div className="flex justify-end mb-8">
+      {/* Export & Sync Buttons */}
+      <div className="flex justify-end gap-3 mb-8">
+        {isInstructor && selectedCourse && (
+          <Button
+            onClick={async () => {
+              setSyncing(true);
+              try {
+                const result = await instructorAPI.forceSyncCourse(selectedCourse);
+                toast.success(
+                  `Sync complete! ${result.data.details.progress_synced} students updated.`
+                );
+                // Refresh the dashboard data
+                await loadAnalyticsData();
+              } catch (error) {
+                console.error('Force sync error:', error);
+                toast.error('Failed to sync data. Please try again.');
+              } finally {
+                setSyncing(false);
+              }
+            }}
+            className="flex items-center gap-2"
+            disabled={syncing}
+          >
+            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing...' : 'Sync Now'}
+          </Button>
+        )}
         <Button onClick={exportData} className="flex items-center gap-2">
           <Download className="w-4 h-4" />
           Export Data
@@ -375,7 +448,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                          <div 
+                          <div
                             className="bg-green-500 h-2 rounded-full"
                             style={{ width: `${student.progress}%` }}
                           ></div>

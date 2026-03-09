@@ -780,11 +780,7 @@ const SkillAssignmentInterface: React.FC = () => {
       return;
     }
 
-    const hasSkills = Object.values(questionSkills).some(skills => skills.length > 0);
-    if (!hasSkills) {
-      toast.error('Please assign at least one skill to questions');
-      return;
-    }
+
 
     setLoading(true);
     try {
@@ -1399,7 +1395,6 @@ const SkillAssignmentInterface: React.FC = () => {
                 <Button
                   type="submit"
                   loading={loading}
-                  disabled={stats.assignedQuestions === 0}
                   className="flex items-center"
                 >
                   <Save className="w-4 h-4 mr-2" />

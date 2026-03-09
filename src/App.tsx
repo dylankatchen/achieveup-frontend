@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { CheckCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard';
@@ -33,27 +33,31 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+interface StudentProgressData {
+  students: Array<{
+    id: string;
+    name: string;
+    skillsMastered: number;
+    badgesEarned: number;
+    progress: number;
+    riskLevel: 'low' | 'medium' | 'high';
+    topSkills: Array<{ skill: string; score: number; level: string }>;
+    skillBreakdown?: Record<string, { score: number; level: string; questionsAttempted: number; questionsCorrect: number }>;
+  }>;
+  skillDistribution: Record<string, number>;
+  averageScores: Record<string, number>;
+}
+
 // Student Progress Component
 const StudentProgress: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<any[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>('');
-  const [studentData, setStudentData] = useState<{
-    students: Array<{
-      id: string;
-      name: string;
-      skillsMastered: number;
-      badgesEarned: number;
-      riskLevel: 'low' | 'medium' | 'high';
-      topSkills: Array<{ skill: string; score: number; level: string }>;
-      skillBreakdown?: Record<string, { score: number; level: string; questionsAttempted: number; questionsCorrect: number }>;
-    }>;
-    skillDistribution: Record<string, number>;
-    averageScores: Record<string, number>;
-  } | null>(null);
+  const [studentData, setStudentData] = useState<StudentProgressData | null>(null);
   const [error, setError] = useState<string>('');
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Load courses on component mount
   useEffect(() => {
@@ -94,12 +98,16 @@ const StudentProgress: React.FC = () => {
       const { instructorAPI } = await import('./services/api');
       const response = await instructorAPI.getCourseStudentAnalytics(courseId);
 
+      // The backend /student-analytics route returns the analytics object directly
+      const analyticsData = response.data.analytics || response.data;
+      console.log('API RESPONSE analyticsData:', analyticsData);
+
       // Check if we have actual student data
-      if (response.data && response.data.students && response.data.students.length > 0) {
+      if (analyticsData && analyticsData.students && analyticsData.students.length > 0) {
         // Transform the API response to match our new interface
-        const transformedData = {
-          ...response.data,
-          students: response.data.students.map((student: any) => {
+        const transformedData: StudentProgressData = {
+          ...analyticsData,
+          students: analyticsData.students.map((student: any) => {
             // Extract top 3 skills from skillBreakdown if it exists
             let topSkills: Array<{ skill: string; score: number; level: string }> = [];
 
@@ -119,6 +127,7 @@ const StudentProgress: React.FC = () => {
               name: student.name,
               skillsMastered: student.skillsMastered || 0,
               badgesEarned: student.badgesEarned || 0,
+              progress: student.progress || 0,
               riskLevel: student.riskLevel || 'medium',
               topSkills,
               skillBreakdown: student.skillBreakdown || {}
@@ -129,7 +138,11 @@ const StudentProgress: React.FC = () => {
         setStudentData(transformedData);
       } else {
         // API succeeded but no students - this means we need to set up skill matrix and assignments
-        setStudentData({ students: [], skillDistribution: {}, averageScores: {} });
+        setStudentData({
+          students: [],
+          skillDistribution: {},
+          averageScores: {},
+        });
         setError('');
       }
     } catch (err: any) {
@@ -180,20 +193,51 @@ const StudentProgress: React.FC = () => {
 
       {/* Course Selection */}
       {courses.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-8 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
           <label className="block text-sm font-medium text-gray-700 mb-2">Select Course</label>
-          <select
-            value={selectedCourse}
-            onChange={(e) => setSelectedCourse(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
-          >
-            <option value="">Choose a course...</option>
-            {courses.map(course => (
-              <option key={course.id} value={course.id}>
-                {course.name} ({course.code})
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-4">
+            <select
+              value={selectedCourse}
+              onChange={(e) => setSelectedCourse(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
+            >
+              <option value="">Choose a course...</option>
+              {courses.map(course => (
+                <option key={course.id} value={course.id}>
+                  {course.name} ({course.code})
+                </option>
+              ))}
+            </select>
+
+            {/* Sync Now Button */}
+            {selectedCourse && (
+              <button
+                onClick={async () => {
+                  setSyncing(true);
+                  try {
+                    const { instructorAPI } = await import('./services/api');
+                    const { toast } = await import('react-hot-toast');
+                    const result = await instructorAPI.forceSyncCourse(selectedCourse);
+                    toast.success(
+                      `Sync complete! ${result.data.details.progress_synced} students updated.`
+                    );
+                    await loadStudentData(selectedCourse);
+                  } catch (error) {
+                    const { toast } = await import('react-hot-toast');
+                    console.error('Force sync error:', error);
+                    toast.error('Failed to sync data. Please try again.');
+                  } finally {
+                    setSyncing(false);
+                  }
+                }}
+                disabled={syncing}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-ucf-gold hover:bg-yellow-600 disabled:opacity-50 transition-colors"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Syncing...' : 'Sync Now'}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -403,19 +447,19 @@ const StudentProgress: React.FC = () => {
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">No Student Progress Data Yet</h2>
           <p className="text-gray-600 mb-6">
-            Student progress tracking requires completing the skill mapping workflow first.
+            Student progress tracking requires completing the skill mapping workflow first and waiting for student submissions.
           </p>
 
           <div className="max-w-md mx-auto bg-blue-50 rounded-lg p-6 mb-6">
             <h3 className="text-lg font-medium text-blue-900 mb-4">Complete Setup Steps:</h3>
             <div className="space-y-4 text-left">
               <div className="flex items-start">
-                <div className="w-6 h-6 bg-green-200 rounded-full flex items-center justify-center mr-3 mt-0.5">
-                  <span className="text-xs font-bold text-green-800">✓</span>
+                <div className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                  <span className="text-xs font-bold text-blue-800">1</span>
                 </div>
                 <div>
-                  <p className="text-green-800 font-medium">Skill matrix created</p>
-                  <p className="text-green-600 text-sm">Skills are defined for this course</p>
+                  <p className="text-blue-800 font-medium">Create skill matrix</p>
+                  <p className="text-blue-600 text-sm">Define skills for this course</p>
                 </div>
               </div>
               <div className="flex items-start">
@@ -423,17 +467,17 @@ const StudentProgress: React.FC = () => {
                   <span className="text-xs font-bold text-blue-800">2</span>
                 </div>
                 <div>
-                  <p className="text-blue-800 font-medium">Assign skills to quiz questions</p>
-                  <p className="text-blue-600 text-sm">Map quiz questions to specific skills</p>
+                  <p className="font-medium text-blue-800">Assign skills to quiz questions</p>
+                  <p className="text-sm text-blue-600">Map quiz questions to specific skills</p>
                 </div>
               </div>
               <div className="flex items-start">
-                <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center mr-3 mt-0.5">
-                  <span className="text-xs font-bold text-gray-600">3</span>
+                <div className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                  <span className="text-xs font-bold text-blue-800">3</span>
                 </div>
                 <div>
-                  <p className="text-gray-700 font-medium">Students complete assessments</p>
-                  <p className="text-gray-600 text-sm">Progress data will appear automatically</p>
+                  <p className="font-medium text-blue-800">Students complete assessments</p>
+                  <p className="text-sm text-blue-600">Progress data will appear automatically</p>
                 </div>
               </div>
             </div>
