@@ -75,7 +75,7 @@ export const skillMatrixAPI = {
   update: (matrixId: string, data: UpdateSkillMatrixRequest): Promise<AxiosResponse<SkillMatrix>> =>
     api.put(`/achieveup/matrix/${matrixId}`, data),
   delete: (matrixId: string): Promise<AxiosResponse<void>> =>
-    api.delete(`/achieveup/matrix/${matrixId}`),
+    api.delete(`/achieveup/matrix/delete/${matrixId}`),
   getSkillSuggestions: (data: { courseId: string; courseName: string; courseCode: string; courseDescription?: string }): Promise<AxiosResponse<any[]>> =>
     api.post('/achieveup/ai/suggest-skills', data),
 };

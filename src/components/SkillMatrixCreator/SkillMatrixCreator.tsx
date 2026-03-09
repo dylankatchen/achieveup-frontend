@@ -49,6 +49,84 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
 
   const isInstructor = user?.canvasTokenType === 'instructor';
 
+  // inline edit state
+  const [editingMatrixId, setEditingMatrixId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editSkills, setEditSkills] = useState<string[]>([]);
+  const [editNewSkill, setEditNewSkill] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+
+  const startInlineEdit = (matrix: SkillMatrix) => {
+  setEditingMatrixId(matrix._id);
+  setEditName(matrix.matrix_name);
+  setEditSkills([...matrix.skills]);
+  setEditNewSkill('');
+};
+
+const cancelInlineEdit = () => {
+  setEditingMatrixId(null);
+  setEditName('');
+  setEditSkills([]);
+  setEditNewSkill('');
+};
+
+const addEditSkill = () => {
+  const s = editNewSkill.trim();
+  if (!s) return;
+
+  if (editSkills.includes(s)) {
+    toast.error('That skill is already in the list');
+    return;
+  }
+
+  setEditSkills(prev => [...prev, s]);
+  setEditNewSkill('');
+};
+
+const removeEditSkill = (idx: number) => {
+  setEditSkills(prev => prev.filter((_, i) => i !== idx));
+};
+
+const saveInlineEdit = async (matrixId: string) => {
+  if (!editName.trim()) {
+    toast.error('Matrix name is required');
+    return;
+  }
+  if (editSkills.length === 0) {
+    toast.error('Add at least one skill');
+    return;
+  }
+
+  try {
+    setSavingEdit(true);
+
+    // backend expects PUT /achieveup/matrix/<matrix_id> with { skills: [...] }
+    // If your backend also supports updating name, include it — otherwise remove matrix_name.
+    const payload: any = { skills: editSkills };
+
+    // OPTIONAL: only include this if your backend update route supports it
+    payload.matrix_name = editName.trim();
+
+    const res = await skillMatrixAPI.update(matrixId, payload);
+
+    // update the list locally
+    setExistingMatrices(prev =>
+      prev.map(m => (m._id === matrixId ? { ...m, ...res.data } : m))
+    );
+
+    toast.success('Matrix updated');
+    cancelInlineEdit();
+  } catch (error: any) {
+    console.error('Save edit error:', error);
+    toast.error(error.response?.data?.message || 'Failed to update matrix');
+  } finally {
+    setSavingEdit(false);
+  }
+};
+
+
+  
   const {
     register,
     handleSubmit,
@@ -387,6 +465,27 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
     );
   };
 
+  const handleDeleteMatrix = async (matrixId: string) => {
+  try {
+    // optional confirm
+    const ok = window.confirm("Delete this skill matrix? This can't be undone.");
+    if (!ok) return;
+
+    await skillMatrixAPI.delete(matrixId);
+
+    // remove from UI immediately
+    setExistingMatrices((prev) => prev.filter((m) => m._id !== matrixId));
+
+    toast.success("Skill matrix deleted");
+  } catch (error: any) {
+    console.error("Delete matrix error:", error);
+    toast.error(
+      error.response?.data?.message || "Failed to delete matrix. Please try again."
+    );
+  }
+};
+
+
   const editSkill = (index: number, newValue: string) => {
     if (newValue.trim()) {
       setFinalSkills(prev => 
@@ -658,54 +757,170 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
                 </div>
               ) : existingMatrices.length > 0 ? (
                 <div className="space-y-3">
-                  {existingMatrices.map((matrix, index) => (
-                    <div key={matrix._id} className="bg-white rounded-lg p-4 border border-blue-200">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h5 className="font-medium text-gray-900">{matrix.matrix_name}</h5>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {matrix.skills.length} skills • Created {new Date(matrix.created_at).toLocaleDateString()}
-                          </p>
-                          <div className="mt-2">
-                            <p className="text-xs text-gray-500 mb-1">Skills:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {matrix.skills.slice(0, 5).map((skill, skillIndex) => (
-                                <span
-                                  key={skillIndex}
-                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                  {existingMatrices.map((matrix) => {
+                    const isEditingThis = editingMatrixId === matrix._id;
+
+                    return (
+                      <div
+                        key={matrix._id}
+                        className="bg-white rounded-lg p-4 border border-blue-200 relative"
+                      >
+                        {!isEditingThis ? (
+                          // ===================== VIEW MODE =====================
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h5 className="font-medium text-gray-900">{matrix.matrix_name}</h5>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {matrix.skills.length} skills • Created{' '}
+                                {new Date(matrix.created_at).toLocaleDateString()}
+                              </p>
+
+                              <div className="mt-2">
+                                <p className="text-xs text-gray-500 mb-1">Skills:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {matrix.skills.slice(0, 5).map((skill, skillIndex) => (
+                                    <span
+                                      key={skillIndex}
+                                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                                    >
+                                      {skill}
+                                    </span>
+                                  ))}
+                                  {matrix.skills.length > 5 && (
+                                    <span className="text-xs text-gray-500">
+                                      +{matrix.skills.length - 5} more
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="ml-4 flex items-center space-x-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFinalSkills([...matrix.skills]);
+                                  setValue('matrixName', `${matrix.matrix_name} (Copy)`);
+                                  setStep('review-skills');
+                                  toast.success(
+                                    'Matrix skills loaded for reference. You can modify and create a new matrix.'
+                                  );
+                                }}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                              >
+                                Use as Template
+                              </button>
+
+                              {/* bottom-right actions */}
+                              <div className="absolute bottom-3 right-4 flex space-x-3">
+                                <button
+                                  type="button"
+                                  onClick={() => startInlineEdit(matrix)}
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                                 >
-                                  {skill}
-                                </span>
-                              ))}
-                              {matrix.skills.length > 5 && (
-                                <span className="text-xs text-gray-500">
-                                  +{matrix.skills.length - 5} more
-                                </span>
-                              )}
+                                  Edit
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteMatrix(matrix._id)}
+                                  className="text-red-600 hover:text-red-800 text-sm font-medium"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="ml-4 flex items-center space-x-2">
-                          <button
-                            onClick={() => {
-                              // Load this matrix's skills for editing/viewing
-                              setFinalSkills([...matrix.skills]);
-                              setValue('matrixName', `${matrix.matrix_name} (Copy)`);
-                              setStep('review-skills');
-                              toast.success('Matrix skills loaded for reference. You can modify and create a new matrix.');
-                            }}
-                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                          >
-                            Use as Template
-                          </button>
-                        </div>
+                        ) : (
+                          // ===================== EDIT MODE (INLINE) =====================
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h5 className="font-medium text-gray-900">Editing Matrix</h5>
+                              <div className="flex gap-3">
+                                <button
+                                  type="button"
+                                  onClick={cancelInlineEdit}
+                                  className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={savingEdit}
+                                  onClick={() => saveInlineEdit(matrix._id)}
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium disabled:opacity-50"
+                                >
+                                  {savingEdit ? 'Saving...' : 'Save'}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* name */}
+                            <div>
+                              <label className="block text-sm text-gray-700 mb-1">Matrix Name</label>
+                              <input
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                              />
+                            </div>
+
+                            {/* skills chips */}
+                            <div>
+                              <label className="block text-sm text-gray-700 mb-1">Skills</label>
+                              <div className="flex flex-wrap gap-2">
+                                {editSkills.map((skill, i) => (
+                                  <span
+                                    key={`${skill}-${i}`}
+                                    className="inline-flex items-center gap-2 px-2 py-1 rounded bg-blue-100 text-blue-800 text-xs font-medium"
+                                  >
+                                    {skill}
+                                    <button
+                                      type="button"
+                                      onClick={() => removeEditSkill(i)}
+                                      className="text-blue-900 hover:text-blue-950"
+                                      title="Remove"
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+
+                              {/* add new skill */}
+                              <div className="flex gap-2 mt-3">
+                                <input
+                                  value={editNewSkill}
+                                  onChange={(e) => setEditNewSkill(e.target.value)}
+                                  placeholder="Add a skill..."
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      addEditSkill();
+                                    }
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={addEditSkill}
+                                  disabled={!editNewSkill.trim()}
+                                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
+                                >
+                                  Add
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-blue-700 text-sm">No existing matrices found for this course.</p>
               )}
+
               
               <div className="mt-4 p-3 bg-blue-100 rounded-lg">
                 <p className="text-sm text-blue-800">
