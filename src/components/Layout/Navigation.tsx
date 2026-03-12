@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Home, Target, Users, Settings, LogOut, User, Wifi, WifiOff, HelpCircle, BarChart3 } from 'lucide-react';
+import { Menu, X, Home, Target, Users, Settings, LogOut, User, Wifi, WifiOff, HelpCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface NavigationItem {

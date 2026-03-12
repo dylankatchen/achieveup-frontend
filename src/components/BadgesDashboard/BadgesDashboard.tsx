@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Award, Users, CheckCircle, Clock, TrendingUp, Target, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
-import { skillMatrixAPI, instructorAPI } from '../../services/api';
+import { instructorAPI } from '../../services/api';
 import Card from '../common/Card';
 import toast from 'react-hot-toast';
 
