@@ -220,14 +220,40 @@ const StudentProgress: React.FC = () => {
                     const { instructorAPI } = await import('./services/api');
                     const { toast } = await import('react-hot-toast');
                     const result = await instructorAPI.forceSyncCourse(selectedCourse);
-                    toast.success(
-                      `Sync complete! ${result.data.details.progress_synced} students updated.`
-                    );
-                    await loadStudentData(selectedCourse);
-                  } catch (error) {
+
+                    if (result.status === 202) {
+                      toast.success(
+                        "Sync started in background. Data will update automatically every 15 seconds for the next minute."
+                      );
+
+                      // Polling logic: Refresh data every 15 seconds for 1 minute
+                      let polls = 0;
+                      const interval = setInterval(async () => {
+                        polls++;
+                        if (polls >= 4) clearInterval(interval);
+                        await loadStudentData(selectedCourse);
+                      }, 15000);
+
+                      // Initial quick refresh
+                      setTimeout(() => {
+                        loadStudentData(selectedCourse);
+                      }, 3000);
+                    }
+                    else {
+                      toast.success(
+                        `Sync complete! ${result.data.details.progress_synced} students updated.`
+                      );
+                      await loadStudentData(selectedCourse);
+                    }
+                  } catch (error: any) {
                     const { toast } = await import('react-hot-toast');
                     console.error('Force sync error:', error);
-                    toast.error('Failed to sync data. Please try again.');
+
+                    if (error.code === 'ERR_NETWORK') {
+                      toast.error('Connection timeout. The sync is likely still running in the background—please check back in a minute.');
+                    } else {
+                      toast.error('Failed to sync data. Please try again.');
+                    }
                   } finally {
                     setSyncing(false);
                   }
