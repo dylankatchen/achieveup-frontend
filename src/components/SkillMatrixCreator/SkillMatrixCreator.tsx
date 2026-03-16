@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { BookOpen, Brain, Save, Edit2, Trash2, Plus, CheckCircle, AlertCircle, Lightbulb } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { skillMatrixAPI, canvasAPI } from '../../services/api';
+import { skillMatrixAPI, canvasAPI, courseDescriptionAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { SkillMatrix } from '../../types';
 import Button from '../common/Button';
@@ -55,6 +55,10 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
   const [editSkills, setEditSkills] = useState<string[]>([]);
   const [editNewSkill, setEditNewSkill] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [showCourseDescriptionModal, setShowCourseDescriptionModal] = useState(false);
+  const [courseDescriptionDraft, setCourseDescriptionDraft] = useState('');
+  const [courseDescriptionLoading, setCourseDescriptionLoading] = useState(false);
+  const [courseDescriptionSaving, setCourseDescriptionSaving] = useState(false);
 
 
   const startInlineEdit = (matrix: SkillMatrix) => {
@@ -124,6 +128,66 @@ const saveInlineEdit = async (matrixId: string) => {
     setSavingEdit(false);
   }
 };
+
+  const getLegacyCourseDescriptionStorageKey = (selectedCourseId: string) => `course_description_${selectedCourseId}`;
+
+  const openCourseDescriptionModal = async () => {
+    if (!selectedCourse) {
+      toast.error('Please select a course first');
+      return;
+    }
+
+    setCourseDescriptionDraft('');
+    setShowCourseDescriptionModal(true);
+
+    try {
+      setCourseDescriptionLoading(true);
+      const response = await courseDescriptionAPI.get(selectedCourse);
+      const persistedDescription = response.data?.description || '';
+
+      if (persistedDescription) {
+        setCourseDescriptionDraft(persistedDescription);
+      } else {
+        // Temporary migration fallback for instructors who already saved local drafts.
+        const legacyDescription = localStorage.getItem(getLegacyCourseDescriptionStorageKey(selectedCourse)) || '';
+        setCourseDescriptionDraft(legacyDescription);
+      }
+    } catch (error) {
+      console.error('Failed to load course description:', error);
+      const legacyDescription = localStorage.getItem(getLegacyCourseDescriptionStorageKey(selectedCourse)) || '';
+      setCourseDescriptionDraft(legacyDescription);
+      toast.error('Failed to load saved description from server');
+    } finally {
+      setCourseDescriptionLoading(false);
+    }
+  };
+
+  const closeCourseDescriptionModal = () => {
+    setShowCourseDescriptionModal(false);
+  };
+
+  const saveCourseDescription = async () => {
+    if (!selectedCourse) {
+      toast.error('Please select a course first');
+      return;
+    }
+
+    try {
+      setCourseDescriptionSaving(true);
+      await courseDescriptionAPI.update(selectedCourse, courseDescriptionDraft);
+
+      // Remove temporary legacy local cache after successful server save.
+      localStorage.removeItem(getLegacyCourseDescriptionStorageKey(selectedCourse));
+
+      setShowCourseDescriptionModal(false);
+      toast.success('Course description saved');
+    } catch (error) {
+      console.error('Failed to save course description:', error);
+      toast.error('Failed to save course description');
+    } finally {
+      setCourseDescriptionSaving(false);
+    }
+  };
 
 
   
@@ -273,12 +337,20 @@ const saveInlineEdit = async (matrixId: string) => {
         console.log('Generated course code:', courseCode);
       }
       
+      let persistedCourseDescription = '';
+      try {
+        const descriptionResponse = await courseDescriptionAPI.get(selectedCourse);
+        persistedCourseDescription = (descriptionResponse.data?.description || '').trim();
+      } catch (error) {
+        console.warn('Unable to load persisted course description for AI context:', error);
+      }
+
       // Prepare and validate request data
       const requestData = {
         courseId: selectedCourse,
         courseName: selectedCourseData.name,
         courseCode: courseCode,
-        courseDescription: selectedCourseData.description || `Course: ${selectedCourseData.name}`
+        courseDescription: persistedCourseDescription || selectedCourseData.description || `Course: ${selectedCourseData.name}`
       };
 
       console.log('Sending skill suggestions request:', requestData);
@@ -946,6 +1018,15 @@ const saveInlineEdit = async (matrixId: string) => {
                 {selectedCourseData.description && (
                   <p className="text-xs text-blue-600 mt-2">{selectedCourseData.description}</p>
                 )}
+                <div className="mt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={openCourseDescriptionModal}
+                  >
+                    Edit Course Description
+                  </Button>
+                </div>
               </div>
 
               <div className="text-center">
@@ -1197,6 +1278,55 @@ const saveInlineEdit = async (matrixId: string) => {
           )}
         </form>
       </Card>
+
+      {showCourseDescriptionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl">
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-semibold text-gray-900">Course Description</h3>
+            </div>
+
+            <div className="px-6 py-4">
+              <label
+                htmlFor="course-description-textarea"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Course description or syllabus summary
+              </label>
+              <textarea
+                id="course-description-textarea"
+                value={courseDescriptionDraft}
+                onChange={(e) => setCourseDescriptionDraft(e.target.value)}
+                placeholder="Paste or write a short description of the course or syllabus here..."
+                disabled={courseDescriptionLoading || courseDescriptionSaving}
+                className="w-full min-h-[200px] px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-ucf-gold"
+              />
+              {courseDescriptionLoading && (
+                <p className="text-sm text-gray-500 mt-2">Loading saved description...</p>
+              )}
+            </div>
+
+            <div className="border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeCourseDescriptionModal}
+                disabled={courseDescriptionSaving}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={saveCourseDescription}
+                loading={courseDescriptionSaving}
+                disabled={courseDescriptionLoading || courseDescriptionSaving}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

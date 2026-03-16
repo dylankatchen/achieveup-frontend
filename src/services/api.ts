@@ -80,6 +80,13 @@ export const skillMatrixAPI = {
     api.post('/achieveup/ai/suggest-skills', data),
 };
 
+export const courseDescriptionAPI = {
+  get: (courseId: string): Promise<AxiosResponse<{ course_id: string; description: string; updated_at: string | null }>> =>
+    api.get(`/achieveup/course-description/${courseId}`),
+  update: (courseId: string, description: string): Promise<AxiosResponse<{ course_id: string; description: string; updated_at: string | null }>> =>
+    api.put(`/achieveup/course-description/${courseId}`, { description }),
+};
+
 // Skill Assignment
 export const skillAssignmentAPI = {
   assign: (data: SkillAssignmentRequest): Promise<AxiosResponse<void>> =>
