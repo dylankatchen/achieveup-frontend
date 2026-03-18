@@ -82,6 +82,13 @@ export const skillMatrixAPI = {
     api.post('/achieveup/ai/suggest-skills', data),
 };
 
+export const courseDescriptionAPI = {
+  get: (courseId: string): Promise<AxiosResponse<{ course_id: string; description: string; updated_at: string | null }>> =>
+    api.get(`/achieveup/course-description/${courseId}`),
+  update: (courseId: string, description: string): Promise<AxiosResponse<{ course_id: string; description: string; updated_at: string | null }>> =>
+    api.put(`/achieveup/course-description/${courseId}`, { description }),
+};
+
 // Skill Assignment
 export const skillAssignmentAPI = {
   importAssignmentsFromCourse: (sourceCourseId: string,targetCourseId: string): Promise<AxiosResponse<{message: string;imported_count: number;matrices: SkillMatrix[];}>> =>
@@ -228,18 +235,32 @@ export const instructorAPI = {
 
   // Get course-specific student analytics
   getCourseStudentAnalytics: (courseId: string): Promise<AxiosResponse<{
-    students: Array<{
-      id: string;
-      name: string;
-      progress: number;
-      skillsMastered: number;
-      badgesEarned: number;
-      riskLevel: 'low' | 'medium' | 'high';
-    }>;
-    skillDistribution: Record<string, number>;
-    averageScores: Record<string, number>;
+    analytics: {
+      students: Array<{
+        id: string;
+        name: string;
+        progress: number;
+        skillsMastered: number;
+        badgesEarned: number;
+        riskLevel: 'low' | 'medium' | 'high';
+      }>;
+      skillDistribution: Record<string, number>;
+      averageScores: Record<string, number>;
+    };
   }>> =>
     api.get(`/achieveup/instructor/courses/${courseId}/student-analytics`),
+
+  // Force a data sync for a specific course (triggers Canvas → mastery → progress)
+  forceSyncCourse: (courseId: string): Promise<AxiosResponse<{
+    message: string;
+    details: {
+      total_quizzes: number;
+      total_synced: number;
+      progress_synced: number;
+      total_errors: number;
+    };
+  }>> =>
+    api.post(`/achieveup/instructor/course/${courseId}/force-sync`),
 };
 
 // Enhanced Canvas API for instructor functionality

@@ -44,16 +44,15 @@ const Navigation: React.FC = () => {
               {navigationItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.href;
-                
+
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 whitespace-nowrap ${
-                      isActive
-                        ? 'border-ucf-gold text-gray-900'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                    }`}
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 whitespace-nowrap ${isActive
+                      ? 'border-ucf-gold text-gray-900'
+                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                      }`}
                   >
                     <Icon className="w-4 h-4 mr-1 flex-shrink-0" />
                     <span className="hidden lg:inline">{item.name}</span>
@@ -85,7 +84,7 @@ const Navigation: React.FC = () => {
                   </div>
                 )}
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <span className="text-xs text-ucf-gold bg-ucf-gold bg-opacity-10 px-2 py-1 rounded-full">
                   Instructor
@@ -149,20 +148,19 @@ const Navigation: React.FC = () => {
                 </div>
               )}
             </div>
-            
+
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
-              
+
               return (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
-                    isActive
-                      ? 'bg-ucf-gold bg-opacity-10 text-ucf-black'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
+                  className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${isActive
+                    ? 'bg-ucf-gold bg-opacity-10 text-ucf-black'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
                   onClick={() => setIsOpen(false)}
                 >
                   <Icon className="w-5 h-5 mr-3" />
@@ -170,7 +168,7 @@ const Navigation: React.FC = () => {
                 </Link>
               );
             })}
-            
+
             {/* Mobile User Info */}
             <div className="border-t border-gray-200 pt-4 mt-4">
               <div className="flex items-center px-3 py-2">
@@ -230,15 +228,15 @@ const Navigation: React.FC = () => {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="p-6">
               <div className="space-y-8">
                 {/* Overview */}
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Overview</h3>
                   <p className="text-gray-600 leading-relaxed">
-                    AchieveUp transforms traditional assessment into a comprehensive skill tracking system. 
-                    Instead of just seeing grades, you get detailed insights into what specific skills 
+                    AchieveUp transforms traditional assessment into a comprehensive skill tracking system.
+                    Instead of just seeing grades, you get detailed insights into what specific skills
                     each student has mastered and where they need support.
                   </p>
                 </div>
@@ -246,7 +244,7 @@ const Navigation: React.FC = () => {
                 {/* Step by Step Process */}
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-6">The Process</h3>
-                  
+
                   <div className="space-y-6">
                     {/* Step 1: Skills */}
                     <div className="flex items-start">
@@ -256,13 +254,13 @@ const Navigation: React.FC = () => {
                       <div>
                         <h4 className="text-md font-medium text-gray-900 mb-2">Define Skills for Your Course</h4>
                         <p className="text-gray-600 mb-3">
-                          Start by creating a <strong>Skill Matrix</strong> that defines what specific skills students 
-                          should learn in your course. For example, in a web development course, skills might include 
+                          Start by creating a <strong>Skill Matrix</strong> that defines what specific skills students
+                          should learn in your course. For example, in a web development course, skills might include
                           "HTML/CSS Fundamentals," "JavaScript Programming," or "Responsive Design."
                         </p>
                         <div className="bg-blue-50 rounded-lg p-3">
                           <p className="text-sm text-blue-800">
-                            <strong>AI-Powered:</strong> Our system can automatically suggest relevant skills 
+                            <strong>AI-Powered:</strong> Our system can automatically suggest relevant skills
                             based on your course name and description, saving you time.
                           </p>
                         </div>
@@ -277,13 +275,13 @@ const Navigation: React.FC = () => {
                       <div>
                         <h4 className="text-md font-medium text-gray-900 mb-2">Assign Skills to Quiz Questions</h4>
                         <p className="text-gray-600 mb-3">
-                          Next, you map your existing Canvas quiz questions to specific skills. This tells the system 
-                          which skills each question is testing. A single question can test multiple skills, and 
+                          Next, you map your existing Canvas quiz questions to specific skills. This tells the system
+                          which skills each question is testing. A single question can test multiple skills, and
                           multiple questions can test the same skill.
                         </p>
                         <div className="bg-green-50 rounded-lg p-3">
                           <p className="text-sm text-green-800">
-                            <strong>Smart Assignment:</strong> Our AI analyzes your questions and suggests 
+                            <strong>Smart Assignment:</strong> Our AI analyzes your questions and suggests
                             which skills they're testing, making this process much faster.
                           </p>
                         </div>
@@ -298,13 +296,13 @@ const Navigation: React.FC = () => {
                       <div>
                         <h4 className="text-md font-medium text-gray-900 mb-2">Students Take Assessments</h4>
                         <p className="text-gray-600 mb-3">
-                          When students complete quizzes in Canvas, AchieveUp automatically analyzes their responses 
-                          and calculates their mastery level for each skill. No extra work required from students 
+                          When students complete quizzes in Canvas, AchieveUp automatically analyzes their responses
+                          and calculates their mastery level for each skill. No extra work required from students
                           or instructors!
                         </p>
                         <div className="bg-purple-50 rounded-lg p-3">
                           <p className="text-sm text-purple-800">
-                            <strong>Automatic Tracking:</strong> Progress updates happen in real-time as 
+                            <strong>Automatic Tracking:</strong> Progress updates happen in real-time as
                             students complete assessments.
                           </p>
                         </div>
@@ -316,7 +314,7 @@ const Navigation: React.FC = () => {
                 {/* Understanding Results */}
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Understanding Student Progress</h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-gray-50 rounded-lg p-4">
                       <h4 className="font-medium text-gray-900 mb-2">Skill Levels</h4>
@@ -395,7 +393,7 @@ const Navigation: React.FC = () => {
                 <div className="bg-ucf-gold bg-opacity-10 rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Ready to Get Started?</h3>
                   <p className="text-gray-700 mb-4">
-                    The best way to understand AchieveUp is to try it! Start by creating a skill matrix 
+                    The best way to understand AchieveUp is to try it! Start by creating a skill matrix
                     for one of your courses, then assign skills to a few quiz questions.
                   </p>
                   <div className="flex space-x-4">
