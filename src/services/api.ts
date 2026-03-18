@@ -65,6 +65,8 @@ api.interceptors.response.use(
 
 // Skill Matrix Management
 export const skillMatrixAPI = {
+  importMatricesFromCourse: (sourceCourseId: string,targetCourseId: string): Promise<AxiosResponse<{message: string;imported_count: number;matrices: SkillMatrix[];}>> =>
+    api.post('/achieveup/matrix/import', {source_course_id: sourceCourseId,target_course_id: targetCourseId,}),
   create: (data: CreateSkillMatrixRequest): Promise<AxiosResponse<SkillMatrix>> =>
     api.post('/achieveup/matrix/create', data),
   get: (courseId: string): Promise<AxiosResponse<SkillMatrix>> =>
@@ -82,6 +84,8 @@ export const skillMatrixAPI = {
 
 // Skill Assignment
 export const skillAssignmentAPI = {
+  importAssignmentsFromCourse: (sourceCourseId: string,targetCourseId: string): Promise<AxiosResponse<{message: string;imported_count: number;matrices: SkillMatrix[];}>> =>
+    api.post('/achieveup/skills/import', {source_course_id: sourceCourseId,target_course_id: targetCourseId,}),
   assign: (data: SkillAssignmentRequest): Promise<AxiosResponse<void>> =>
     api.post('/achieveup/skills/assign', data),
   suggest: (data: SkillSuggestionRequest): Promise<AxiosResponse<string[]>> =>
@@ -192,6 +196,7 @@ export const instructorAPI = {
   getCourseAnalytics: (courseId: string): Promise<AxiosResponse<InstructorCourseAnalytics>> =>
     api.get(`/achieveup/instructor/courses/${courseId}/analytics`),
 
+  
   // AI-powered skill suggestions for course context
   suggestSkillsForCourse: (courseId: string, courseTitle: string): Promise<AxiosResponse<string[]>> =>
     api.post('/achieveup/instructor/courses/suggest-skills', { courseId, courseTitle }),

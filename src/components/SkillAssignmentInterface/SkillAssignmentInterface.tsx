@@ -12,6 +12,7 @@ interface CanvasCourse {
   id: string;
   name: string;
   code: string;
+  term: number;
 }
 
 interface CanvasQuiz {
@@ -85,6 +86,10 @@ const SkillAssignmentInterface: React.FC = () => {
   const [selectedMatrix, setSelectedMatrix] = useState<string>('');
   const [selectedMatrixData, setSelectedMatrixData] = useState<any>(null);
   const [loadingMatrices, setLoadingMatrices] = useState<boolean>(false);
+
+  const [selectedPastCourse, setSelectedPastCourse] = useState<string>('');
+  const [selectedPastCourseData, setSelectedPastCourseData] = useState<CanvasCourse | null>(null);
+  const [selectedCourseData, setSelectedCourseData] = useState<CanvasCourse | null>(null);
 
   const {
     register,
@@ -300,6 +305,33 @@ const SkillAssignmentInterface: React.FC = () => {
     return suggestions;
   };
 
+  const getSection = (courseCode: string) => {
+    const parts = courseCode.split(' ');
+    return parts[1]; // "0002"
+  };
+
+  const getBaseCourseCode = (courseCode?: string) => {
+  if (!courseCode) return '';
+  return courseCode.split('-')[0];
+  };
+
+  const findPastCourse = (selected: CanvasCourse) => {
+    
+    const base = getBaseCourseCode(selected.code);
+    const section = getSection(selected.code);
+
+    const matches = courses.filter(c =>
+    getBaseCourseCode(c.code) === base &&
+    getSection(c.code) === section &&
+    c.id !== selected.id //&&
+    //c.term < selected.term
+  );
+  
+  //matches.sort((a, b) => b.term - a.term);
+  
+  return matches[0];
+  };
+
   const loadCourses = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
@@ -324,7 +356,17 @@ const SkillAssignmentInterface: React.FC = () => {
         : await canvasAPI.getQuizzes(courseId);
 
       setQuizzes(response.data);
+      const course = courses.find(c => c.id === courseId);
+
       setSelectedCourse(courseId);
+      setSelectedCourseData(course || null);
+      
+      const pastCourse = course ? findPastCourse(course) : undefined;
+      
+      if(pastCourse){
+        setSelectedPastCourse(pastCourse.id);
+        setSelectedPastCourseData(pastCourse);
+      }  
 
       // Reset quiz selection when course changes
       setSelectedQuiz('');
@@ -349,6 +391,37 @@ const SkillAssignmentInterface: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isInstructor, setValue]);
+
+  const handleImportAssignmentsFromPastCourse = async (pastCourseId: string) => {
+  if (!selectedCourse) {
+    toast.error("No target course selected");
+    return;
+  }
+
+  if (!pastCourseId) {
+    toast.error("No past course selected");
+    return;
+  }
+
+  try {
+    const response = await skillAssignmentAPI.importAssignmentsFromCourse(
+      pastCourseId,
+      selectedCourse
+    );
+
+    toast.success(
+      `Imported ${response.data.imported_count} skill assignment(s) from past course`
+    );
+
+    // optional: reload questions so UI shows new assigned skills immediately
+    if (selectedQuiz) {
+      await loadQuestions(selectedQuiz, selectedCourse);
+    }
+  } catch (error) {
+    console.error("Import skill assignments failed:", error);
+    toast.error("Failed to import skill assignments from past course");
+  }
+};
 
   const loadSkillMatrices = async (courseId: string) => {
     try {
@@ -976,6 +1049,22 @@ const SkillAssignmentInterface: React.FC = () => {
             </div>
           )}
 
+          <div className="mb-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-medium text-blue-900">
+                Similar Course Found
+              </h4>
+              <button
+                type="button"
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                onClick={() => handleImportAssignmentsFromPastCourse(selectedPastCourse)}
+              >
+                Import Assignments From {selectedPastCourseData?.name}
+              </button>
+            </div>
+          </div>
+
+
           {/* No Quiz Selected */}
           {selectedCourse && !selectedQuiz && (
             <div className="text-center py-12">
@@ -997,6 +1086,7 @@ const SkillAssignmentInterface: React.FC = () => {
             </div>
           )}
 
+          
           {/* Selected Matrix Info */}
           {selectedMatrixData && (
             <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-lg">

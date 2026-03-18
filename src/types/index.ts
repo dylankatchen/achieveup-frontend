@@ -150,6 +150,7 @@ export interface CanvasCourse {
   id: string;
   name: string;
   code: string;
+  term: number;
 }
 
 export interface CanvasQuiz {
