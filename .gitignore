@@ -6,6 +6,7 @@
 .pnp.js
 /.env
 
+
 # testing
 /coverage
 
@@ -31,6 +32,9 @@ yarn-error.log*
 
 # OS
 Thumbs.db
+
+#env
+.env
 
 # Backend implementation guide (internal use only)
 backend-implementation-guide.txt
