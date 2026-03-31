@@ -90,6 +90,7 @@ const SkillAssignmentInterface: React.FC = () => {
   const [selectedPastCourse, setSelectedPastCourse] = useState<string>('');
   const [selectedPastCourseData, setSelectedPastCourseData] = useState<CanvasCourse | null>(null);
   const [selectedCourseData, setSelectedCourseData] = useState<CanvasCourse | null>(null);
+  const [showImportBox, setShowImportBox] = useState(true);
 
   const {
     register,
@@ -319,15 +320,15 @@ const SkillAssignmentInterface: React.FC = () => {
     
     const base = getBaseCourseCode(selected.code);
     const section = getSection(selected.code);
-
+    console.log("finding past course for", base, section)
     const matches = courses.filter(c =>
     getBaseCourseCode(c.code) === base &&
     getSection(c.code) === section &&
-    c.id !== selected.id //&&
-    //c.term < selected.term
+    c.id !== selected.id &&
+    c.term < selected.term
   );
   
-  //matches.sort((a, b) => b.term - a.term);
+  matches.sort((a, b) => b.term - a.term);
   
   return matches[0];
   };
@@ -345,6 +346,7 @@ const SkillAssignmentInterface: React.FC = () => {
     } finally {
       setLoading(false);
     }
+    
   }, [isInstructor]);
 
   const loadQuizzes = useCallback(async (courseId: string): Promise<void> => {
@@ -357,16 +359,12 @@ const SkillAssignmentInterface: React.FC = () => {
 
       setQuizzes(response.data);
       const course = courses.find(c => c.id === courseId);
-
+      
       setSelectedCourse(courseId);
       setSelectedCourseData(course || null);
-      
-      const pastCourse = course ? findPastCourse(course) : undefined;
-      
-      if(pastCourse){
-        setSelectedPastCourse(pastCourse.id);
-        setSelectedPastCourseData(pastCourse);
-      }  
+      const statusResponse = await skillMatrixAPI.getImportStatus(courseId);
+        const assignmentImported = statusResponse.data.assignments_imported;
+        setShowImportBox(!assignmentImported);
 
       // Reset quiz selection when course changes
       setSelectedQuiz('');
@@ -390,7 +388,25 @@ const SkillAssignmentInterface: React.FC = () => {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInstructor, setValue]);
+  }, [isInstructor, setValue, courses]);
+
+  useEffect(() => {
+  if (!selectedCourse || courses.length === 0) return;
+
+  const course = courses.find(c => String(c.id) === String(selectedCourse));
+  setSelectedCourseData(course || null);
+
+  const pastCourse = course ? findPastCourse(course) : undefined;
+
+  if (pastCourse) {
+    setSelectedPastCourse(pastCourse.id);
+    setSelectedPastCourseData(pastCourse);
+  } else {
+    setSelectedPastCourse('');
+    setSelectedPastCourseData(null);
+  }
+  
+}, [selectedCourse, courses]);
 
   const handleImportAssignmentsFromPastCourse = async (pastCourseId: string) => {
   if (!selectedCourse) {
@@ -412,6 +428,9 @@ const SkillAssignmentInterface: React.FC = () => {
     toast.success(
       `Imported ${response.data.imported_count} skill assignment(s) from past course`
     );
+    const statusResponse = await skillMatrixAPI.getImportStatus(selectedCourse);
+        const assignmentImported = statusResponse.data.assignments_imported;
+        setShowImportBox(!assignmentImported);
 
     // optional: reload questions so UI shows new assigned skills immediately
     if (selectedQuiz) {
@@ -441,6 +460,8 @@ const SkillAssignmentInterface: React.FC = () => {
       console.log(`Skill matrices API response for course ${courseId}:`, response.data);
 
       setAvailableMatrices(response.data);
+
+      
 
       // Auto-select first matrix if available
       if (response.data.length > 0) {
@@ -1045,6 +1066,7 @@ const SkillAssignmentInterface: React.FC = () => {
             </div>
           )}
 
+          {showImportBox && selectedPastCourseData &&(
           <div className="mb-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-lg font-medium text-blue-900">
@@ -1059,6 +1081,7 @@ const SkillAssignmentInterface: React.FC = () => {
               </button>
             </div>
           </div>
+          )}
 
 
           {/* No Quiz Selected */}

@@ -49,7 +49,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({
   const [existingMatrices, setExistingMatrices] = useState<SkillMatrix[]>([]);
   const [showExistingMatrices, setShowExistingMatrices] = useState(false);
   const [loadingExistingMatrices, setLoadingExistingMatrices] = useState(false);
-
+  const [showImportBox, setShowImportBox] = useState(true);
   const isInstructor = user?.canvasTokenType === 'instructor';
 
   // inline edit state
@@ -278,6 +278,10 @@ const saveInlineEdit = async (matrixId: string) => {
       
       const response = await skillMatrixAPI.getAllByCourse(courseId);
       console.log(`Existing matrices API response for course ${courseId}:`, response.data);
+
+      const statusResponse = await skillMatrixAPI.getImportStatus(courseId);
+      const matricesImported = statusResponse.data.matrices_imported;
+      setShowImportBox(!matricesImported);
       
       setExistingMatrices(response.data);
       
@@ -341,6 +345,7 @@ const saveInlineEdit = async (matrixId: string) => {
     }
   };
 
+
   const handleImportFromPastCourse = async (pastCourseId: string) => {
   if (!selectedCourse) {
     toast.error("No target course selected");
@@ -356,7 +361,7 @@ const saveInlineEdit = async (matrixId: string) => {
     toast.success(
       `Imported ${response.data.imported_count} skill matrix(s) from past course`
     );
-
+    setShowImportBox(false)
     // refresh matrices list for the current course
     loadExistingMatrices(selectedCourse);
 
@@ -867,17 +872,19 @@ const saveInlineEdit = async (matrixId: string) => {
             </div>
           )}
 
-          <div className="mb-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-medium text-blue-900">
-                  Similar Course Found
-                </h4>
-                <button className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                onClick={() => handleImportFromPastCourse(selectedPastCourse)}
-                >Import Matrices From {selectedPastCourseData?.name}
-                </button>
+          {showImportBox && selectedPastCourseData &&(
+            <div className="mb-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-medium text-blue-900">
+                    Similar Course Found
+                  </h4>
+                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  onClick={() => handleImportFromPastCourse(selectedPastCourse)}
+                  >Import Matrices From {selectedPastCourseData?.name}
+                  </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {selectedCourseData &&(
             <div className="mb-8 p-6 bg-blue-50 rounded-lg border border-blue-200">

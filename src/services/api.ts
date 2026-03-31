@@ -27,7 +27,7 @@ import {
   QuestionSkillAssignment
 } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -80,6 +80,8 @@ export const skillMatrixAPI = {
     api.delete(`/achieveup/matrix/delete/${matrixId}`),
   getSkillSuggestions: (data: { courseId: string; courseName: string; courseCode: string; courseDescription?: string }): Promise<AxiosResponse<any[]>> =>
     api.post('/achieveup/ai/suggest-skills', data),
+  getImportStatus: (courseId: string): Promise<AxiosResponse<{target_course_id: string; source_course_id: string; matrices_imported: boolean; assignments_imported: boolean;}>> =>
+    api.get(`/achieveup/import-status/${courseId}`),
 };
 
 export const courseDescriptionAPI = {
@@ -106,6 +108,8 @@ export const skillAssignmentAPI = {
     questionIds.forEach(id => params.append('question_id', id));
     return api.get(`/achieveup/skills/assignments?${params.toString()}`);
   },
+  getImportStatus: (courseId: string): Promise<AxiosResponse<{target_course_id: string; source_course_id: string; matrices_imported: boolean; assignments_imported: boolean;}>> =>
+    api.get(`/achieveup/import-status/${courseId}`),
 };
 
 // Badge Management
