@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { badgeAPI } from '../services/api';
 import Card from '../components/common/Card';
-import { Award, Share2, AlertCircle, Copy, Check } from 'lucide-react';
+import { Award, Share2, AlertCircle, Check } from 'lucide-react';
 
 interface BadgeData {
     badge_id: string;

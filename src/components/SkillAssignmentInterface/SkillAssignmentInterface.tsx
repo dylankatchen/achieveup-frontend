@@ -320,7 +320,6 @@ const SkillAssignmentInterface: React.FC = () => {
 
     const base = getBaseCourseCode(selected.code);
     const section = getSection(selected.code);
-    console.log("finding past course for", base, section)
     const matches = courses.filter(c =>
       getBaseCourseCode(c.code) === base &&
       getSection(c.code) === section &&
@@ -358,7 +357,6 @@ const SkillAssignmentInterface: React.FC = () => {
         : await canvasAPI.getQuizzes(courseId);
 
       setQuizzes(response.data);
-      const course = courses.find(c => c.id === courseId);
 
       setSelectedCourse(courseId);
       //setSelectedCourseData(course || null);
@@ -406,7 +404,7 @@ const SkillAssignmentInterface: React.FC = () => {
       setSelectedPastCourseData(null);
     }
 
-  }, [selectedCourse, courses, findPastCourse]);
+  }, [selectedCourse, courses]);
 
   const handleImportAssignmentsFromPastCourse = async (pastCourseId: string) => {
     if (!selectedCourse) {
