@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { CheckCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+import { CheckCircle, AlertTriangle, RefreshCw, ArrowUpRight } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
 import Dashboard from './pages/Dashboard';
@@ -13,6 +13,7 @@ import SkillMatrixCreator from './components/SkillMatrixCreator/SkillMatrixCreat
 import SkillAssignmentInterface from './components/SkillAssignmentInterface/SkillAssignmentInterface';
 import BadgesDashboard from './components/BadgesDashboard/BadgesDashboard';
 import StudentBadgesTest from './components/StudentBadgesTest/StudentBadgesTest';
+import StudentPublicBadges from './pages/StudentPublicBadges';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -381,7 +382,16 @@ const StudentProgress: React.FC = () => {
                   {studentData.students.map((student) => (
                     <tr key={student.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{student.name}</div>
+                        <Link
+                          to={`/badges/${student.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium text-ucf-gold hover:text-yellow-600 hover:underline flex items-center"
+                          title="View Student Badges"
+                        >
+                          {student.name}
+                          <ArrowUpRight className="w-3 h-3 ml-1" />
+                        </Link>
                         <div className="text-sm text-gray-500">{student.id}</div>
                       </td>
                       <td className="px-6 py-4">
@@ -711,6 +721,9 @@ const AppRoutes: React.FC = () => {
             <StudentBadgesTest />
           </Layout>
         </ProtectedRoute>
+      } />
+      <Route path="/badges/:studentId" element={
+        <StudentPublicBadges />
       } />
     </Routes>
   );

@@ -128,7 +128,7 @@ const StudentBadgesTest: React.FC = () => {
                                             <div className="flex-1">
                                                 <div className="flex items-center space-x-3 mb-2">
                                                     <h3 className="text-lg font-semibold text-gray-900">
-                                                        {badge.skill_name}
+                                                        {badge.badge_name}
                                                     </h3>
                                                     <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getBadgeLevelColor(badge.badge_level)}`}>
                                                         {badge.badge_level}
@@ -146,7 +146,7 @@ const StudentBadgesTest: React.FC = () => {
                                                     </div>
                                                     <div className="flex items-center text-gray-600">
                                                         <TrendingUp className="w-4 h-4 mr-2" />
-                                                        <span>Score: {badge.progress_percentage.toFixed(1)}%</span>
+                                                        <span>Score: {badge.progress_percentage.toFixed(2)}%</span>
                                                     </div>
                                                 </div>
                                             </div>

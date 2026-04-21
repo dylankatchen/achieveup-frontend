@@ -258,7 +258,7 @@ const BadgesDashboard: React.FC<BadgesDashboardProps> = ({ courseId }) => {
                                         {/* Badge Info */}
                                         <div className="flex-1">
                                             <div className="flex items-center space-x-3 mb-2">
-                                                <h3 className="text-lg font-semibold text-gray-900">{badge.skill_name}</h3>
+                                                <h3 className="text-lg font-semibold text-gray-900">{badge.name}</h3>
                                             </div>
                                             <p className="text-sm text-gray-600 mb-2">{badge.description}</p>
                                             <div className="flex items-center space-x-4 text-sm">

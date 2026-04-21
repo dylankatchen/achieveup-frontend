@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
-import { Download, Filter, TrendingUp, Users, Target, Award, BarChart3, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Download, Filter, TrendingUp, Users, Target, Award, BarChart3, AlertTriangle, CheckCircle, RefreshCw, ArrowUpRight } from 'lucide-react';
 import { analyticsAPI, instructorAPI, canvasInstructorAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import Card from '../common/Card';
@@ -443,7 +444,16 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ courseId }) => 
                 {studentAnalytics.students.map((student) => (
                   <tr key={student.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{student.name}</div>
+                      <Link
+                        to={`/badges/${student.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-ucf-gold hover:text-yellow-600 hover:underline flex items-center"
+                        title="View Student Badges"
+                      >
+                        {student.name}
+                        <ArrowUpRight className="w-3 h-3 ml-1" />
+                      </Link>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
