@@ -306,17 +306,17 @@ const SkillAssignmentInterface: React.FC = () => {
     return suggestions;
   };
 
-  const getSection = (courseCode: string) => {
+  const getSection = useCallback((courseCode: string) => {
     const parts = courseCode.split(' ');
     return parts[1]; // "0002"
-  };
+  }, []);
 
-  const getBaseCourseCode = (courseCode?: string) => {
+  const getBaseCourseCode = useCallback((courseCode?: string) => {
     if (!courseCode) return '';
     return courseCode.split('-')[0];
-  };
+  }, []);
 
-  const findPastCourse = (selected: CanvasCourse) => {
+  const findPastCourse = useCallback((selected: CanvasCourse) => {
 
     const base = getBaseCourseCode(selected.code);
     const section = getSection(selected.code);
@@ -330,7 +330,7 @@ const SkillAssignmentInterface: React.FC = () => {
     matches.sort((a, b) => b.term - a.term);
 
     return matches[0];
-  };
+  }, [courses, getBaseCourseCode, getSection]);
 
   const loadCourses = useCallback(async (): Promise<void> => {
     try {
@@ -404,7 +404,7 @@ const SkillAssignmentInterface: React.FC = () => {
       setSelectedPastCourseData(null);
     }
 
-  }, [selectedCourse, courses]);
+  }, [selectedCourse, courses, findPastCourse]);
 
   const handleImportAssignmentsFromPastCourse = async (pastCourseId: string) => {
     if (!selectedCourse) {
