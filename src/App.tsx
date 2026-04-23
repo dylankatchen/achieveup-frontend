@@ -428,13 +428,13 @@ const StudentProgress: React.FC = () => {
                           {getRiskIcon(student.riskLevel)}
                           {student.riskLevel}
                         </span>
-                        {student.skillBreakdown && (
+                        {/* {student.skillBreakdown && (
                           <div className="text-xs text-gray-500 mt-1">
                             {Object.keys(student.skillBreakdown).length > 0 && (
                               <span>Based on {student.totalQuestionsAttempted || 0} questions</span>
                             )}
                           </div>
-                        )}
+                        )} */}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
