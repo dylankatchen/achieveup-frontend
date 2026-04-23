@@ -384,6 +384,7 @@ const StudentProgress: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Link
                           to={`/badges/${student.id}`}
+                          state={{ studentName: student.name }}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm font-medium text-ucf-gold hover:text-yellow-600 hover:underline flex items-center"

@@ -137,6 +137,7 @@ export const badgeAPI = {
     api.get(`/achieveup/badges/student/${studentId}/earned`),
   getPublicStudentBadges: (studentId: string): Promise<AxiosResponse<{
     student_id: string;
+    student_name?: string;
     total_badges: number;
     badges: Array<{
       badge_id: string;

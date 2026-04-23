@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { badgeAPI } from '../services/api';
 import Card from '../components/common/Card';
 import { Award, Share2, AlertCircle, Check } from 'lucide-react';
@@ -17,10 +17,22 @@ interface BadgeData {
 
 const StudentPublicBadges: React.FC = () => {
     const { studentId } = useParams<{ studentId: string }>();
+    const location = useLocation();
+    const nameFromState = location.state?.studentName;
+
     const [badges, setBadges] = useState<BadgeData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [studentName, setStudentName] = useState<string | null>(nameFromState || null);
+
+    useEffect(() => {
+        if (studentName) {
+            document.title = `${studentName}'s Achievements | AchieveUp`;
+        } else {
+            document.title = "Student Achievements | AchieveUp";
+        }
+    }, [studentName]);
 
     useEffect(() => {
         const loadBadges = async () => {
@@ -29,6 +41,11 @@ const StudentPublicBadges: React.FC = () => {
                 setLoading(true);
                 const response = await badgeAPI.getPublicStudentBadges(studentId);
                 setBadges(response.data.badges || []);
+                
+                // If we don't have a name from state, use the one from the API
+                if (!nameFromState && response.data.student_name) {
+                    setStudentName(response.data.student_name);
+                }
                 setError(null);
             } catch (err: any) {
                 console.error('Error loading public badges:', err);
@@ -39,7 +56,7 @@ const StudentPublicBadges: React.FC = () => {
         };
 
         loadBadges();
-    }, [studentId]);
+    }, [studentId, nameFromState]);
 
     const handleCopyLink = () => {
         navigator.clipboard.writeText(window.location.href)
@@ -112,10 +129,13 @@ const StudentPublicBadges: React.FC = () => {
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-12">
                     <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl mb-4">
-                        Student Achievements
+                        {studentName ? `${studentName}'s Achievements` : 'Student Achievements'}
                     </h1>
                     <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
-                        View the verified skills and badges earned through AchieveUp.
+                        {studentName
+                            ? `View the verified skills and badges earned by ${studentName} through AchieveUp.`
+                            : 'View the verified skills and badges earned through AchieveUp.'
+                        }
                     </p>
 
                     <button
@@ -149,7 +169,7 @@ const StudentPublicBadges: React.FC = () => {
                                             {badge.badge_name}
                                         </h3>
                                         <p className="text-xs text-white opacity-90 mt-2 font-medium bg-black bg-opacity-20 px-3 py-1 rounded-full drop-shadow-sm">
-                                            {badge.course_name || 'AchieveUp Verified'}
+                                            AchieveUp Verified
                                         </p>
                                     </div>
                                 </div>
@@ -170,10 +190,6 @@ const StudentPublicBadges: React.FC = () => {
                                             <div className="sm:col-span-1">
                                                 <dt className="text-sm font-medium text-gray-500">Skill</dt>
                                                 <dd className="mt-1 text-sm text-gray-900 font-medium">{badge.skill_name || 'N/A'}</dd>
-                                            </div>
-                                            <div className="sm:col-span-1">
-                                                <dt className="text-sm font-medium text-gray-500">Class</dt>
-                                                <dd className="mt-1 text-sm text-gray-900 font-medium">{badge.course_name || 'N/A'}</dd>
                                             </div>
                                             <div className="sm:col-span-1">
                                                 <dt className="text-sm font-medium text-gray-500">Earned</dt>
