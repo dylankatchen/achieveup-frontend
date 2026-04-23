@@ -383,8 +383,7 @@ const StudentProgress: React.FC = () => {
                     <tr key={student.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Link
-                          to={`/badges/${student.id}`}
-                          state={{ studentName: student.name }}
+                          to={`/badges/${student.id}?name=${encodeURIComponent(student.name)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm font-medium text-ucf-gold hover:text-yellow-600 hover:underline flex items-center"
@@ -428,13 +427,13 @@ const StudentProgress: React.FC = () => {
                           {getRiskIcon(student.riskLevel)}
                           {student.riskLevel}
                         </span>
-                        {/* {student.skillBreakdown && (
+                        {student.skillBreakdown && (
                           <div className="text-xs text-gray-500 mt-1">
                             {Object.keys(student.skillBreakdown).length > 0 && (
                               <span>Based on {student.totalQuestionsAttempted || 0} questions</span>
                             )}
                           </div>
-                        )} */}
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button

@@ -18,13 +18,20 @@ interface BadgeData {
 const StudentPublicBadges: React.FC = () => {
     const { studentId } = useParams<{ studentId: string }>();
     const location = useLocation();
-    const nameFromState = location.state?.studentName;
+    const queryParams = new URLSearchParams(location.search);
+    const nameFromQuery = queryParams.get('name');
 
     const [badges, setBadges] = useState<BadgeData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
-    const [studentName, setStudentName] = useState<string | null>(nameFromState || null);
+    const [studentName, setStudentName] = useState<string | null>(nameFromQuery);
+
+    useEffect(() => {
+        if (nameFromQuery) {
+            setStudentName(nameFromQuery);
+        }
+    }, [nameFromQuery]);
 
     useEffect(() => {
         if (studentName) {
@@ -42,8 +49,8 @@ const StudentPublicBadges: React.FC = () => {
                 const response = await badgeAPI.getPublicStudentBadges(studentId);
                 setBadges(response.data.badges || []);
                 
-                // If we don't have a name from state, use the one from the API
-                if (!nameFromState && response.data.student_name) {
+                // If we don't have a name from the query, use the one from the API
+                if (!nameFromQuery && response.data.student_name) {
                     setStudentName(response.data.student_name);
                 }
                 setError(null);
@@ -56,7 +63,7 @@ const StudentPublicBadges: React.FC = () => {
         };
 
         loadBadges();
-    }, [studentId, nameFromState]);
+    }, [studentId, nameFromQuery]);
 
     const handleCopyLink = () => {
         navigator.clipboard.writeText(window.location.href)
