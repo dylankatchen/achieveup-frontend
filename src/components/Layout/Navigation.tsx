@@ -25,15 +25,14 @@ interface NavigationItem {
 const Navigation: React.FC = () => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
-  const { user, logout, backendAvailable } = useAuth();
+  const { user, logout, backendAvailable, isInstructor } = useAuth();
   const location = useLocation();
 
-  const isInstructor = user?.role === 'instructor';
   // An instructor account can also have student enrollment on Canvas — has_student_access unlocks the view student dashboard
   const canSwitchToStudentView = isInstructor && !!user?.has_student_access;
   // The account's role never changes when an instructor toggles into the student view — only the route does
   // so what the nav tag (instructor/student) is based on current dashboard being viewed, not just user.role.
-  const viewingAsStudent = canSwitchToStudentView && location.pathname === '/student-dashboard';
+  const viewingAsStudent = canSwitchToStudentView && location.pathname.startsWith('/student-dashboard');
   const displayAsInstructor = isInstructor && !viewingAsStudent;
 
   const navigationItems: NavigationItem[] = displayAsInstructor
