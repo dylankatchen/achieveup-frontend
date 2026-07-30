@@ -24,7 +24,15 @@ function RequireRole({ roles }: { roles?: Array<'student' | 'instructor'> }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (roles && !roles.some((r) => r === user!.role)) {
+  // An instructor whose Canvas token also validates as a student enrollment
+  // (has_student_access) is allowed into student-only routes too, so the
+  // dual-role "view as student" toggle actually has somewhere to go.
+  const hasRequiredRole =
+    !roles ||
+    roles.some((r) => r === user!.role) ||
+    (roles.includes('student') && user!.role === 'instructor' && !!user!.has_student_access);
+
+  if (!hasRequiredRole) {
     return (
       <Navigate
         to={user!.role === 'instructor' ? '/instructor-dashboard' : '/student-dashboard'}

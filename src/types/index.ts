@@ -8,6 +8,10 @@ export interface User {
   canvasTokenType: 'instructor' | 'student';
   canvas_token_created_at?: string;
   canvas_token_last_validated?: string;
+  canvas_student_id?: string;
+  // True when an instructor account's Canvas token also validates as a
+  // student enrollment somewhere (Canvas roles are per-course, not per-user).
+  has_student_access?: boolean;
 }
 
 export interface SignupRequest {

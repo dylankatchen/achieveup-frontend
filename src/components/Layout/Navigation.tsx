@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Home, Target, Users, Settings, LogOut, User, Wifi, WifiOff, HelpCircle } from 'lucide-react';
+import {
+  Menu,
+  X,
+  Home,
+  Target,
+  Users,
+  Settings,
+  LogOut,
+  User,
+  Wifi,
+  WifiOff,
+  HelpCircle,
+  ArrowLeftRight,
+} from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface NavigationItem {
@@ -12,15 +25,24 @@ interface NavigationItem {
 const Navigation: React.FC = () => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [showHelpModal, setShowHelpModal] = useState<boolean>(false);
-  const { user, logout, backendAvailable } = useAuth();
+  const { user, logout, backendAvailable, isInstructor } = useAuth();
   const location = useLocation();
 
-  const navigationItems: NavigationItem[] = [
-    { name: 'Dashboard', href: '/', icon: Home },
-    { name: 'Skill Matrix', href: '/skill-matrix', icon: Target },
-    { name: 'Skill Assignment', href: '/skill-assignment', icon: Target },
-    { name: 'Student Progress', href: '/progress', icon: Users },
-  ];
+  // An instructor account can also have student enrollment on Canvas — has_student_access unlocks the view student dashboard
+  const canSwitchToStudentView = isInstructor && !!user?.has_student_access;
+  // The account's role never changes when an instructor toggles into the student view — only the route does
+  // so what the nav tag (instructor/student) is based on current dashboard being viewed, not just user.role.
+  const viewingAsStudent = canSwitchToStudentView && location.pathname.startsWith('/student-dashboard');
+  const displayAsInstructor = isInstructor && !viewingAsStudent;
+
+  const navigationItems: NavigationItem[] = displayAsInstructor
+    ? [
+        { name: 'Dashboard', href: '/', icon: Home },
+        { name: 'Skill Matrix', href: '/skill-matrix', icon: Target },
+        { name: 'Skill Assignment', href: '/skill-assignment', icon: Target },
+        { name: 'Student Progress', href: '/progress', icon: Users },
+      ]
+    : [{ name: 'Dashboard', href: viewingAsStudent ? '/student-dashboard' : '/', icon: Home }];
 
   const handleLogout = (): void => {
     logout();
@@ -49,10 +71,11 @@ const Navigation: React.FC = () => {
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 whitespace-nowrap ${isActive
-                      ? 'border-ucf-gold text-gray-900'
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                      }`}
+                    className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200 whitespace-nowrap ${
+                      isActive
+                        ? 'border-ucf-gold text-gray-900'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                    }`}
                   >
                     <Icon className="w-4 h-4 mr-1 flex-shrink-0" />
                     <span className="hidden lg:inline">{item.name}</span>
@@ -87,9 +110,20 @@ const Navigation: React.FC = () => {
 
               <div className="flex items-center space-x-2">
                 <span className="text-xs text-ucf-gold bg-ucf-gold bg-opacity-10 px-2 py-1 rounded-full">
-                  Instructor
+                  {displayAsInstructor ? 'Instructor' : 'Student'}
                 </span>
               </div>
+              {canSwitchToStudentView && (
+                <Link
+                  to={viewingAsStudent ? '/instructor-dashboard' : '/student-dashboard'}
+                  className="flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200 flex-shrink-0"
+                >
+                  <ArrowLeftRight className="w-4 h-4 mr-1" />
+                  <span className="hidden lg:inline">
+                    {viewingAsStudent ? 'Back to Instructor' : 'View as Student'}
+                  </span>
+                </Link>
+              )}
               <button
                 onClick={() => setShowHelpModal(true)}
                 className="flex items-center text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200 flex-shrink-0"
@@ -119,11 +153,7 @@ const Navigation: React.FC = () => {
                 onClick={() => setIsOpen(!isOpen)}
                 className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ucf-gold"
               >
-                {isOpen ? (
-                  <X className="block h-6 w-6" />
-                ) : (
-                  <Menu className="block h-6 w-6" />
-                )}
+                {isOpen ? <X className="block h-6 w-6" /> : <Menu className="block h-6 w-6" />}
               </button>
             </div>
           </div>
@@ -157,10 +187,11 @@ const Navigation: React.FC = () => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${isActive
-                    ? 'bg-ucf-gold bg-opacity-10 text-ucf-black'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`}
+                  className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
+                    isActive
+                      ? 'bg-ucf-gold bg-opacity-10 text-ucf-black'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
                   onClick={() => setIsOpen(false)}
                 >
                   <Icon className="w-5 h-5 mr-3" />
@@ -175,11 +206,23 @@ const Navigation: React.FC = () => {
                 <User className="w-5 h-5 text-gray-500 mr-3" />
                 <div>
                   <div className="text-sm text-gray-700">
-                    {user?.name || user?.email || 'Instructor'}
+                    {user?.name || user?.email || (displayAsInstructor ? 'Instructor' : 'Student')}
                   </div>
-                  <div className="text-xs text-ucf-gold">Instructor Portal</div>
+                  <div className="text-xs text-ucf-gold">
+                    {displayAsInstructor ? 'Instructor Portal' : 'Student Portal'}
+                  </div>
                 </div>
               </div>
+              {canSwitchToStudentView && (
+                <Link
+                  to={viewingAsStudent ? '/instructor-dashboard' : '/student-dashboard'}
+                  className="flex items-center w-full px-3 py-2 text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <ArrowLeftRight className="w-5 h-5 mr-3" />
+                  {viewingAsStudent ? 'Back to Instructor' : 'View as Student'}
+                </Link>
+              )}
               <button
                 onClick={() => {
                   setShowHelpModal(true);
@@ -218,9 +261,7 @@ const Navigation: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-900">
-                How AchieveUp Works
-              </h2>
+              <h2 className="text-xl font-semibold text-gray-900">How AchieveUp Works</h2>
               <button
                 onClick={() => setShowHelpModal(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -235,9 +276,9 @@ const Navigation: React.FC = () => {
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Overview</h3>
                   <p className="text-gray-600 leading-relaxed">
-                    AchieveUp transforms traditional assessment into a comprehensive skill tracking system.
-                    Instead of just seeing grades, you get detailed insights into what specific skills
-                    each student has mastered and where they need support.
+                    AchieveUp transforms traditional assessment into a comprehensive skill tracking
+                    system. Instead of just seeing grades, you get detailed insights into what
+                    specific skills each student has mastered and where they need support.
                   </p>
                 </div>
 
@@ -252,16 +293,20 @@ const Navigation: React.FC = () => {
                         <span className="text-blue-600 font-bold">1</span>
                       </div>
                       <div>
-                        <h4 className="text-md font-medium text-gray-900 mb-2">Define Skills for Your Course</h4>
+                        <h4 className="text-md font-medium text-gray-900 mb-2">
+                          Define Skills for Your Course
+                        </h4>
                         <p className="text-gray-600 mb-3">
-                          Start by creating a <strong>Skill Matrix</strong> that defines what specific skills students
-                          should learn in your course. For example, in a web development course, skills might include
-                          "HTML/CSS Fundamentals," "JavaScript Programming," or "Responsive Design."
+                          Start by creating a <strong>Skill Matrix</strong> that defines what
+                          specific skills students should learn in your course. For example, in a
+                          web development course, skills might include "HTML/CSS Fundamentals,"
+                          "JavaScript Programming," or "Responsive Design."
                         </p>
                         <div className="bg-blue-50 rounded-lg p-3">
                           <p className="text-sm text-blue-800">
-                            <strong>AI-Powered:</strong> Our system can automatically suggest relevant skills
-                            based on your course name and description, saving you time.
+                            <strong>AI-Powered:</strong> Our system can automatically suggest
+                            relevant skills based on your course name and description, saving you
+                            time.
                           </p>
                         </div>
                       </div>
@@ -273,16 +318,18 @@ const Navigation: React.FC = () => {
                         <span className="text-green-600 font-bold">2</span>
                       </div>
                       <div>
-                        <h4 className="text-md font-medium text-gray-900 mb-2">Assign Skills to Quiz Questions</h4>
+                        <h4 className="text-md font-medium text-gray-900 mb-2">
+                          Assign Skills to Quiz Questions
+                        </h4>
                         <p className="text-gray-600 mb-3">
-                          Next, you map your existing Canvas quiz questions to specific skills. This tells the system
-                          which skills each question is testing. A single question can test multiple skills, and
-                          multiple questions can test the same skill.
+                          Next, you map your existing Canvas quiz questions to specific skills. This
+                          tells the system which skills each question is testing. A single question
+                          can test multiple skills, and multiple questions can test the same skill.
                         </p>
                         <div className="bg-green-50 rounded-lg p-3">
                           <p className="text-sm text-green-800">
-                            <strong>Smart Assignment:</strong> Our AI analyzes your questions and suggests
-                            which skills they're testing, making this process much faster.
+                            <strong>Smart Assignment:</strong> Our AI analyzes your questions and
+                            suggests which skills they're testing, making this process much faster.
                           </p>
                         </div>
                       </div>
@@ -294,16 +341,18 @@ const Navigation: React.FC = () => {
                         <span className="text-purple-600 font-bold">3</span>
                       </div>
                       <div>
-                        <h4 className="text-md font-medium text-gray-900 mb-2">Students Take Assessments</h4>
+                        <h4 className="text-md font-medium text-gray-900 mb-2">
+                          Students Take Assessments
+                        </h4>
                         <p className="text-gray-600 mb-3">
-                          When students complete quizzes in Canvas, AchieveUp automatically analyzes their responses
-                          and calculates their mastery level for each skill. No extra work required from students
-                          or instructors!
+                          When students complete quizzes in Canvas, AchieveUp automatically analyzes
+                          their responses and calculates their mastery level for each skill. No
+                          extra work required from students or instructors!
                         </p>
                         <div className="bg-purple-50 rounded-lg p-3">
                           <p className="text-sm text-purple-800">
-                            <strong>Automatic Tracking:</strong> Progress updates happen in real-time as
-                            students complete assessments.
+                            <strong>Automatic Tracking:</strong> Progress updates happen in
+                            real-time as students complete assessments.
                           </p>
                         </div>
                       </div>
@@ -313,22 +362,30 @@ const Navigation: React.FC = () => {
 
                 {/* Understanding Results */}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Understanding Student Progress</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    Understanding Student Progress
+                  </h3>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-gray-50 rounded-lg p-4">
                       <h4 className="font-medium text-gray-900 mb-2">Skill Levels</h4>
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center">
-                          <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800 mr-2">Beginner</span>
+                          <span className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-800 mr-2">
+                            Beginner
+                          </span>
                           <span className="text-gray-600">0-60% accuracy</span>
                         </div>
                         <div className="flex items-center">
-                          <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 mr-2">Intermediate</span>
+                          <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 mr-2">
+                            Intermediate
+                          </span>
                           <span className="text-gray-600">61-80% accuracy</span>
                         </div>
                         <div className="flex items-center">
-                          <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 mr-2">Advanced</span>
+                          <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 mr-2">
+                            Advanced
+                          </span>
                           <span className="text-gray-600">81-100% accuracy</span>
                         </div>
                       </div>
@@ -338,15 +395,21 @@ const Navigation: React.FC = () => {
                       <h4 className="font-medium text-gray-900 mb-2">Risk Levels</h4>
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center">
-                          <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 mr-2">Low Risk</span>
+                          <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 mr-2">
+                            Low Risk
+                          </span>
                           <span className="text-gray-600">Performing well overall</span>
                         </div>
                         <div className="flex items-center">
-                          <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 mr-2">Medium Risk</span>
+                          <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 mr-2">
+                            Medium Risk
+                          </span>
                           <span className="text-gray-600">Some areas need attention</span>
                         </div>
                         <div className="flex items-center">
-                          <span className="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 mr-2">High Risk</span>
+                          <span className="px-2 py-1 rounded-full text-xs bg-red-100 text-red-800 mr-2">
+                            High Risk
+                          </span>
                           <span className="text-gray-600">Multiple skills need improvement</span>
                         </div>
                       </div>
@@ -356,34 +419,46 @@ const Navigation: React.FC = () => {
 
                 {/* Benefits */}
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Benefits for Instructors</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    Benefits for Instructors
+                  </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex items-start">
                       <div className="w-2 h-2 bg-ucf-gold rounded-full mt-2 mr-3 flex-shrink-0"></div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">Identify Struggling Students</p>
-                        <p className="text-xs text-gray-600">See which students need help before it's too late</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          Identify Struggling Students
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          See which students need help before it's too late
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start">
                       <div className="w-2 h-2 bg-ucf-gold rounded-full mt-2 mr-3 flex-shrink-0"></div>
                       <div>
                         <p className="text-sm font-medium text-gray-900">Target Interventions</p>
-                        <p className="text-xs text-gray-600">Know exactly which skills each student needs to work on</p>
+                        <p className="text-xs text-gray-600">
+                          Know exactly which skills each student needs to work on
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start">
                       <div className="w-2 h-2 bg-ucf-gold rounded-full mt-2 mr-3 flex-shrink-0"></div>
                       <div>
                         <p className="text-sm font-medium text-gray-900">Improve Course Design</p>
-                        <p className="text-xs text-gray-600">See which skills the class struggles with most</p>
+                        <p className="text-xs text-gray-600">
+                          See which skills the class struggles with most
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start">
                       <div className="w-2 h-2 bg-ucf-gold rounded-full mt-2 mr-3 flex-shrink-0"></div>
                       <div>
                         <p className="text-sm font-medium text-gray-900">Evidence-Based Teaching</p>
-                        <p className="text-xs text-gray-600">Make informed decisions based on concrete skill data</p>
+                        <p className="text-xs text-gray-600">
+                          Make informed decisions based on concrete skill data
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -393,8 +468,8 @@ const Navigation: React.FC = () => {
                 <div className="bg-ucf-gold bg-opacity-10 rounded-lg p-6">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Ready to Get Started?</h3>
                   <p className="text-gray-700 mb-4">
-                    The best way to understand AchieveUp is to try it! Start by creating a skill matrix
-                    for one of your courses, then assign skills to a few quiz questions.
+                    The best way to understand AchieveUp is to try it! Start by creating a skill
+                    matrix for one of your courses, then assign skills to a few quiz questions.
                   </p>
                   <div className="flex space-x-4">
                     <button
@@ -426,4 +501,4 @@ const Navigation: React.FC = () => {
   );
 };
 
-export default Navigation; 
+export default Navigation;
