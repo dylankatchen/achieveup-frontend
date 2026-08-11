@@ -56,7 +56,7 @@ export interface UpdateSkillMatrixRequest {
 
 // Skill Assignment Types
 export interface QuestionSkillAssignment {
-  [questionId: string]: string[];
+  [questionText: string]: string[];
 }
 
 export interface SkillAssignmentRequest {

@@ -40,14 +40,16 @@ interface CanvasQuestion {
 }
 
 interface QuestionSkills {
-  [questionId: string]: string[];
+  [questionText: string]: string[];
 }
 
 interface Suggestions {
-  [questionId: string]: string[];
+  [questionText: string]: string[];
 }
 
 interface QuestionAnalysis {
+  // Backend echoes back whatever opaque id we send per question; we now send
+  // the question text as that id, so this field carries text, not a Canvas id.
   questionId: string;
   complexity: 'low' | 'medium' | 'high';
   suggestedSkills: string[];
@@ -60,11 +62,11 @@ interface FormData {
 }
 
 interface AIAnalysisStatus {
-  [questionId: string]: 'pending' | 'analyzing' | 'completed' | 'error';
+  [questionText: string]: 'pending' | 'analyzing' | 'completed' | 'error';
 }
 
 interface HumanReviewStatus {
-  [questionId: string]: boolean;
+  [questionText: string]: boolean;
 }
 
 function extractTextFromHTML(htmlString: string) {
@@ -72,6 +74,12 @@ function extractTextFromHTML(htmlString: string) {
   var div = document.createElement('div');
   div.innerHTML = htmlString;
   return div.textContent || div.innerText || '';
+}
+
+// Question text is now the identifier used for skill assignment (state keys,
+// API payloads); Canvas question ids are only kept for React list keys / search.
+function getQuestionKey(question: CanvasQuestion): string {
+  return extractTextFromHTML(question.question_text);
 }
 
 const SkillAssignmentInterface: React.FC = () => {
@@ -126,25 +134,30 @@ const SkillAssignmentInterface: React.FC = () => {
 
       // Set all questions to analyzing status
       const analyzingStatus: AIAnalysisStatus = {};
-      questions.forEach((q) => (analyzingStatus[q.id] = 'analyzing'));
+      questions.forEach((q) => (analyzingStatus[getQuestionKey(q)] = 'analyzing'));
       setAiAnalysisStatus(analyzingStatus);
 
       try {
         console.log(
           'Starting AI analysis for questions:',
-          questions.map((q) => ({ id: q.id, text: q.question_text?.substring(0, 100) }))
+          questions.map((q) => ({ text: getQuestionKey(q).substring(0, 100) }))
         );
 
         const requestData = {
           courseId: selectedCourse,
           quizId: selectedQuiz,
           matrixId: selectedMatrix,
-          questions: questions.map((q) => ({
-            id: q.id,
-            text: extractTextFromHTML(q.question_text),
-            type: q.question_type || 'multiple_choice',
-            points: q.points || 1,
-          })),
+          questions: questions.map((q) => {
+            const questionText = getQuestionKey(q);
+            return {
+              // Backend just echoes this back as the correlation id; using
+              // question text here so suggestions come back keyed by text.
+              id: questionText,
+              text: questionText,
+              type: q.question_type || 'multiple_choice',
+              points: q.points || 1,
+            };
+          }),
         };
 
         console.log('Sending question analysis request:', requestData);
@@ -166,11 +179,11 @@ const SkillAssignmentInterface: React.FC = () => {
 
         // Set any remaining questions to completed (in case response is incomplete)
         questions.forEach((q) => {
-          // q.question_text is already sanitized on load
-          if (!completedStatus[q.id]) {
-            completedStatus[q.id] = 'completed';
-            if (!newSuggestions[q.id]) {
-              newSuggestions[q.id] = [];
+          const questionKey = getQuestionKey(q);
+          if (!completedStatus[questionKey]) {
+            completedStatus[questionKey] = 'completed';
+            if (!newSuggestions[questionKey]) {
+              newSuggestions[questionKey] = [];
             }
           }
         });
@@ -206,7 +219,7 @@ const SkillAssignmentInterface: React.FC = () => {
 
         // Set error status for all questions, then update to completed since we have mock suggestions
         const completedStatus: AIAnalysisStatus = {};
-        questions.forEach((q) => (completedStatus[q.id] = 'completed'));
+        questions.forEach((q) => (completedStatus[getQuestionKey(q)] = 'completed'));
         setAiAnalysisStatus(completedStatus);
 
         // Provide detailed error handling with fallback message
@@ -268,7 +281,7 @@ const SkillAssignmentInterface: React.FC = () => {
         questionSkills.push(...genericSuggestions.slice(0, 2));
       }
 
-      suggestions[question.id] = questionSkills;
+      suggestions[getQuestionKey(question)] = questionSkills;
     });
 
     return suggestions;
@@ -789,16 +802,16 @@ const SkillAssignmentInterface: React.FC = () => {
         setQuestions(sanitizedQuestions);
         setSelectedQuiz(quizId);
 
-        // Pull assigned skills from AchieveUp DB
-        const questionIds = response.data.map((q: CanvasQuestion) => String(q.id));
+        // Pull assigned skills from AchieveUp DB, keyed by question text
+        const questionTexts = sanitizedQuestions.map((q: CanvasQuestion) => getQuestionKey(q));
 
-        const params = new URLSearchParams({ course_id: String(selectedCourse) });
-        questionIds.forEach((id) => params.append('question_id', id));
-
-        const skillsResponse = await skillAssignmentAPI.getAssignments(selectedCourse, questionIds);
+        const skillsResponse = await skillAssignmentAPI.getAssignments(
+          selectedCourse,
+          questionTexts
+        );
 
         // Expected shape:
-        // { question_skills: { [questionId]: string[] } }
+        // { question_skills: { [questionText]: string[] } }
         const savedSkills = skillsResponse.data?.question_skills || {};
 
         // Initialize question skills and status
@@ -807,10 +820,11 @@ const SkillAssignmentInterface: React.FC = () => {
         const initialReviewStatus: HumanReviewStatus = {};
         console.log(response.data);
 
-        response.data.forEach((question: CanvasQuestion) => {
-          initialSkills[question.id] = savedSkills[String(question.id)] ?? [];
-          initialStatus[question.id] = 'pending';
-          initialReviewStatus[question.id] = false;
+        sanitizedQuestions.forEach((question: CanvasQuestion) => {
+          const questionKey = getQuestionKey(question);
+          initialSkills[questionKey] = savedSkills[questionKey] ?? [];
+          initialStatus[questionKey] = 'pending';
+          initialReviewStatus[questionKey] = false;
         });
 
         setQuestionSkills(initialSkills);
@@ -847,23 +861,23 @@ const SkillAssignmentInterface: React.FC = () => {
     }
   }, [watchedQuiz, loadQuestions, watchedCourse]);
 
-  const addSkillToQuestion = (questionId: string, skill: string): void => {
+  const addSkillToQuestion = (questionText: string, skill: string): void => {
     setQuestionSkills((prev) => ({
       ...prev,
-      [questionId]: [...(prev[questionId] || []), skill],
+      [questionText]: [...(prev[questionText] || []), skill],
     }));
   };
 
-  const removeSkillFromQuestion = (questionId: string, skillIndex: number): void => {
+  const removeSkillFromQuestion = (questionText: string, skillIndex: number): void => {
     setQuestionSkills((prev) => ({
       ...prev,
-      [questionId]: prev[questionId].filter((_, index) => index !== skillIndex),
+      [questionText]: prev[questionText].filter((_, index) => index !== skillIndex),
     }));
   };
 
-  const addSuggestionToQuestion = (questionId: string, skill: string): void => {
-    if (!questionSkills[questionId]?.includes(skill)) {
-      addSkillToQuestion(questionId, skill);
+  const addSuggestionToQuestion = (questionText: string, skill: string): void => {
+    if (!questionSkills[questionText]?.includes(skill)) {
+      addSkillToQuestion(questionText, skill);
     }
   };
 
@@ -884,8 +898,9 @@ const SkillAssignmentInterface: React.FC = () => {
     const updatedSkills = { ...questionSkills };
 
     filteredQuestions.forEach((question) => {
-      if (!updatedSkills[question.id]?.includes(skill)) {
-        updatedSkills[question.id] = [...(updatedSkills[question.id] || []), skill];
+      const questionKey = getQuestionKey(question);
+      if (!updatedSkills[questionKey]?.includes(skill)) {
+        updatedSkills[questionKey] = [...(updatedSkills[questionKey] || []), skill];
       }
     });
 
@@ -901,12 +916,13 @@ const SkillAssignmentInterface: React.FC = () => {
 
     // Process all questions (not just filtered ones) that have suggestions
     questions.forEach((question) => {
-      const questionSuggestions = suggestions[question.id] || [];
+      const questionKey = getQuestionKey(question);
+      const questionSuggestions = suggestions[questionKey] || [];
       if (questionSuggestions.length > 0) {
         questionsWithSuggestions++;
         questionSuggestions.forEach((skill) => {
-          if (!updatedSkills[question.id]?.includes(skill)) {
-            updatedSkills[question.id] = [...(updatedSkills[question.id] || []), skill];
+          if (!updatedSkills[questionKey]?.includes(skill)) {
+            updatedSkills[questionKey] = [...(updatedSkills[questionKey] || []), skill];
             assignedCount++;
           }
         });
@@ -934,11 +950,12 @@ const SkillAssignmentInterface: React.FC = () => {
         question.question_text.toLowerCase().includes(searchTerm.toLowerCase()) ||
         question.id.toLowerCase().includes(searchTerm.toLowerCase());
 
+      const questionKey = getQuestionKey(question);
       const matchesSkillFilter =
         skillFilter === 'all' ||
-        (skillFilter === 'assigned' && questionSkills[question.id]?.length > 0) ||
+        (skillFilter === 'assigned' && questionSkills[questionKey]?.length > 0) ||
         (skillFilter === 'unassigned' &&
-          (!questionSkills[question.id] || questionSkills[question.id].length === 0));
+          (!questionSkills[questionKey] || questionSkills[questionKey].length === 0));
 
       return matchesSearch && matchesSkillFilter;
     });
@@ -1373,11 +1390,11 @@ const SkillAssignmentInterface: React.FC = () => {
               <div className="space-y-6">
                 {Array.isArray(filteredQuestions) &&
                   filteredQuestions.map((question, index) => {
-                    // const questionAnalysisData = questionAnalysis.find(a => a.questionId === question.id);
-                    const questionSuggestions = suggestions[question.id] || [];
-                    const assignedSkills = questionSkills[question.id] || [];
-                    const analysisStatus = aiAnalysisStatus[question.id] || 'pending';
-                    const isReviewed = humanReviewStatus[question.id] || false;
+                    const questionKey = getQuestionKey(question);
+                    const questionSuggestions = suggestions[questionKey] || [];
+                    const assignedSkills = questionSkills[questionKey] || [];
+                    const analysisStatus = aiAnalysisStatus[questionKey] || 'pending';
+                    const isReviewed = humanReviewStatus[questionKey] || false;
                     const questionNumber = index + 1;
 
                     return (
@@ -1442,7 +1459,7 @@ const SkillAssignmentInterface: React.FC = () => {
                                     <button
                                       key={index}
                                       type="button"
-                                      onClick={() => addSuggestionToQuestion(question.id, skill)}
+                                      onClick={() => addSuggestionToQuestion(questionKey, skill)}
                                       className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
                                         assignedSkills.includes(skill)
                                           ? 'bg-green-100 text-green-800 cursor-default'
@@ -1493,7 +1510,7 @@ const SkillAssignmentInterface: React.FC = () => {
                                   <button
                                     key={index}
                                     type="button"
-                                    onClick={() => addSuggestionToQuestion(question.id, skill)}
+                                    onClick={() => addSuggestionToQuestion(questionKey, skill)}
                                     className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full hover:bg-blue-200 transition-colors"
                                   >
                                     {skill}
@@ -1519,7 +1536,7 @@ const SkillAssignmentInterface: React.FC = () => {
                                       {skill}
                                       <button
                                         type="button"
-                                        onClick={() => removeSkillFromQuestion(question.id, index)}
+                                        onClick={() => removeSkillFromQuestion(questionKey, index)}
                                         className="ml-2 text-green-600 hover:text-green-800"
                                       >
                                         ×
@@ -1542,7 +1559,7 @@ const SkillAssignmentInterface: React.FC = () => {
                                   const target = e.target as HTMLInputElement;
                                   const skill = target.value.trim();
                                   if (skill && !assignedSkills.includes(skill)) {
-                                    addSkillToQuestion(question.id, skill);
+                                    addSkillToQuestion(questionKey, skill);
                                     target.value = '';
                                   }
                                 }
@@ -1551,7 +1568,7 @@ const SkillAssignmentInterface: React.FC = () => {
                             />
                             <Button
                               type="button"
-                              onClick={() => markAsReviewed(question.id)}
+                              onClick={() => markAsReviewed(questionKey)}
                               variant={isReviewed ? 'success' : 'outline'}
                               size="sm"
                             >
