@@ -50,7 +50,7 @@ const StudentDashboard: React.FC = () => {
               .catch(() => ({ course, progress: null }))
           )
         ),
-        badgeAPI.getStudentEarnedBadges(user.id).catch(() => null),
+        badgeAPI.getStudentEarnedBadges(user.canvas_student_id!).catch(() => null),
       ]);
 
       const skills: AttemptedSkill[] = [];
