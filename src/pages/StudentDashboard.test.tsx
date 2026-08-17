@@ -4,7 +4,13 @@ import '@testing-library/jest-dom';
 import StudentDashboard from './StudentDashboard';
 
 const mockAuthContext = {
-  user: { id: 'student-1', name: 'Jordan Miller', email: 'jordan@example.com', role: 'student' as const },
+  user: {
+    id: 'student-1',
+    name: 'Jordan Miller',
+    email: 'jordan@example.com',
+    role: 'student' as const,
+    canvas_student_id: 'student-1',
+  },
 };
 
 jest.mock('../contexts/AuthContext', () => ({
