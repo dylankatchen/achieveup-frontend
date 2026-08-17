@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { canvasAPI } from '../services/api';
+import { canvasAPI, badgeAPI } from '../services/api';
 import { CanvasCourse } from '../types';
 import { toast } from 'react-hot-toast';
 import Card from '../components/common/Card';
@@ -14,12 +14,33 @@ import {
   BookOpen,
   Settings,
   Clock,
+  Medal,
 } from 'lucide-react';
+
+interface EarnedBadge {
+  badge_id: string;
+  badge_name: string;
+  skill_name: string;
+  badge_level: string;
+  progress_percentage: number;
+  earned_at: string;
+  course_id: string;
+  course_name: string;
+}
+
+const BADGE_LEVEL_COLORS: Record<string, string> = {
+  beginner: 'bg-blue-100 text-blue-700',
+  intermediate: 'bg-purple-100 text-purple-700',
+  advanced: 'bg-green-100 text-green-700',
+  expert: 'bg-yellow-100 text-yellow-700',
+};
 
 const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
   const [coursesError, setCoursesError] = useState(false);
+  const [badges, setBadges] = useState<EarnedBadge[]>([]);
+  const [badgesError, setBadgesError] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // A Canvas API token is mandatory at signup, so every account reaching this
@@ -27,8 +48,9 @@ const StudentDashboard: React.FC = () => {
   // itself is reachable right now, so a fetch failure is tracked separately
   // from "the token has no courses."
   const loadDashboardData = useCallback(async () => {
+    setLoading(true);
+
     try {
-      setLoading(true);
       // canvasAPI.getCourses() is token-type-agnostic — it just returns whatever
       // courses the stored token has access to.
       const response = await canvasAPI.getCourses();
@@ -39,10 +61,23 @@ const StudentDashboard: React.FC = () => {
       toast.error('Could not load courses from Canvas. Please try refreshing.');
       setCourses([]);
       setCoursesError(true);
-    } finally {
-      setLoading(false);
     }
-  }, []);
+
+    // canvas_student_id links this account to the mastery/badge data Canvas
+    // activity has already generated — it's guaranteed present, populated at
+    // signup as part of the mandatory Canvas token validation.
+    try {
+      const badgeResponse = await badgeAPI.getStudentEarnedBadges(user!.canvas_student_id!);
+      setBadges(badgeResponse.data.badges);
+      setBadgesError(false);
+    } catch (error) {
+      console.error('Error loading badges:', error);
+      setBadges([]);
+      setBadgesError(true);
+    }
+
+    setLoading(false);
+  }, [user]);
 
   useEffect(() => {
     loadDashboardData();
@@ -115,28 +150,24 @@ const StudentDashboard: React.FC = () => {
           <div className="text-xs text-gray-500 mt-1">From Canvas LMS</div>
         </Card>
 
-        <Card className="text-center opacity-75">
+        <Card className="text-center hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-lg mx-auto mb-4">
             <Target className="w-6 h-6 text-purple-600" />
           </div>
-          <div className="text-2xl font-bold text-gray-400">—</div>
-          <div className="text-sm text-gray-600">Skills Mastered</div>
-          <div className="text-xs text-gray-500 mt-1 flex items-center justify-center">
-            <Clock className="w-3 h-3 mr-1" />
-            Coming soon
+          <div className="text-2xl font-bold text-gray-900">
+            {new Set(badges.map((b) => b.skill_name)).size}
           </div>
+          <div className="text-sm text-gray-600">Skills Mastered</div>
+          <div className="text-xs text-gray-500 mt-1">Distinct skills earned</div>
         </Card>
 
-        <Card className="text-center opacity-75">
+        <Card className="text-center hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-lg mx-auto mb-4">
             <Award className="w-6 h-6 text-yellow-600" />
           </div>
-          <div className="text-2xl font-bold text-gray-400">—</div>
+          <div className="text-2xl font-bold text-gray-900">{badges.length}</div>
           <div className="text-sm text-gray-600">Badges Earned</div>
-          <div className="text-xs text-gray-500 mt-1 flex items-center justify-center">
-            <Clock className="w-3 h-3 mr-1" />
-            Coming soon
-          </div>
+          <div className="text-xs text-gray-500 mt-1">Across all courses</div>
         </Card>
       </div>
 
@@ -172,18 +203,54 @@ const StudentDashboard: React.FC = () => {
         )}
       </Card>
 
-      {/* Skill Progress — placeholder, not fabricated data */}
-      <Card title="Skill Progress & Badges" className="mb-8">
-        <div className="text-center py-8">
-          <Clock className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-600 font-medium">
-            Skill tracking is being connected to your account
-          </p>
-          <p className="text-sm text-gray-500 mt-1 max-w-md mx-auto">
-            Your skill mastery and badges will appear here once your account is linked to your
-            Canvas activity. Check back soon.
-          </p>
-        </div>
+      {/* Skills & Badges */}
+      <Card title="Skills & Badges" className="mb-8">
+        {badgesError ? (
+          <div className="text-center py-8">
+            <Clock className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-600 font-medium">Couldn't load your badges right now</p>
+            <p className="text-sm text-gray-500 mt-1">Please try refreshing the page.</p>
+          </div>
+        ) : badges.length === 0 ? (
+          <div className="text-center py-8">
+            <Medal className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-600 font-medium">No badges earned yet</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Badges appear here as you master skills in your courses.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {badges.map((badge) => (
+              <div
+                key={badge.badge_id}
+                className="flex items-start p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+              >
+                <div className="flex items-center justify-center w-10 h-10 bg-yellow-100 rounded-lg mr-4 flex-shrink-0">
+                  <Medal className="w-5 h-5 text-yellow-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-medium text-gray-900 truncate">{badge.badge_name}</p>
+                  <p className="text-sm text-gray-500 truncate">
+                    {badge.skill_name} · {badge.course_name}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
+                        BADGE_LEVEL_COLORS[badge.badge_level] || 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {badge.badge_level}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      Earned {new Date(badge.earned_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       {/* Settings shortcut */}
