@@ -5,7 +5,17 @@ import { canvasAPI, badgeAPI } from '../services/api';
 import { CanvasCourse } from '../types';
 import { toast } from 'react-hot-toast';
 import Card from '../components/common/Card';
-import { Home, Award, Target, CheckCircle, BookOpen, Settings, Clock, Medal } from 'lucide-react';
+import {
+  Home,
+  Award,
+  Target,
+  CheckCircle,
+  AlertTriangle,
+  BookOpen,
+  Settings,
+  Clock,
+  Medal,
+} from 'lucide-react';
 
 interface EarnedBadge {
   badge_id: string;
@@ -28,12 +38,15 @@ const BADGE_LEVEL_COLORS: Record<string, string> = {
 const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
   const [courses, setCourses] = useState<CanvasCourse[]>([]);
+  const [coursesError, setCoursesError] = useState(false);
   const [badges, setBadges] = useState<EarnedBadge[]>([]);
   const [badgesError, setBadgesError] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // A Canvas API token is mandatory at signup, so every account reaching this
-  // dashboard is guaranteed to have one — no "not connected" state to handle.
+  // dashboard is guaranteed to have one — but that doesn't guarantee Canvas
+  // itself is reachable right now, so a fetch failure is tracked separately
+  // from "the token has no courses."
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
 
@@ -42,10 +55,12 @@ const StudentDashboard: React.FC = () => {
       // courses the stored token has access to.
       const response = await canvasAPI.getCourses();
       setCourses(response.data);
+      setCoursesError(false);
     } catch (error) {
       console.error('Error loading courses:', error);
       toast.error('Could not load courses from Canvas. Please try refreshing.');
       setCourses([]);
+      setCoursesError(true);
     }
 
     // canvas_student_id links this account to the mastery/badge data Canvas
@@ -104,10 +119,17 @@ const StudentDashboard: React.FC = () => {
               Student Dashboard
             </div>
           </div>
-          <div className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-            <CheckCircle className="w-3 h-3 mr-1 inline" />
-            Canvas Connected
-          </div>
+          {coursesError ? (
+            <div className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+              <AlertTriangle className="w-3 h-3 mr-1 inline" />
+              Canvas Connection Issue
+            </div>
+          ) : (
+            <div className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+              <CheckCircle className="w-3 h-3 mr-1 inline" />
+              Canvas Connected
+            </div>
+          )}
           {courses.length > 0 && (
             <div className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
               <BookOpen className="w-3 h-3 mr-1 inline" />
@@ -151,7 +173,13 @@ const StudentDashboard: React.FC = () => {
 
       {/* My Courses */}
       <Card title="My Courses" className="mb-8">
-        {courses.length === 0 ? (
+        {coursesError ? (
+          <div className="text-center py-8">
+            <AlertTriangle className="w-10 h-10 text-red-300 mx-auto mb-3" />
+            <p className="text-gray-600 font-medium">Couldn't load your courses from Canvas</p>
+            <p className="text-sm text-gray-500 mt-1">Please try refreshing the page.</p>
+          </div>
+        ) : courses.length === 0 ? (
           <div className="text-center py-8 text-gray-500">No courses found in Canvas.</div>
         ) : (
           <div className="space-y-3">
