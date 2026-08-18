@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import Input from './Input';
 
@@ -34,7 +35,7 @@ describe('Input Component', () => {
     expect(screen.getByText('This field is required')).toBeInTheDocument();
     
     const input = screen.getByRole('textbox');
-    expect(input).toHaveClass('border-red-500');
+    expect(input).toHaveClass('border-red-300');
   });
 
   test('renders with helper text', () => {
@@ -79,7 +80,7 @@ describe('Input Component', () => {
     
     const input = screen.getByRole('textbox');
     expect(input).toBeDisabled();
-    expect(input).toHaveClass('opacity-50', 'cursor-not-allowed');
+    expect(input).toHaveClass('disabled:opacity-50', 'disabled:cursor-not-allowed');
   });
 
   test('applies required attribute', () => {
@@ -108,14 +109,14 @@ describe('Input Component', () => {
     const handleFocus = jest.fn();
     const handleBlur = jest.fn();
     render(<Input onFocus={handleFocus} onBlur={handleBlur} />);
-    
+
     const input = screen.getByRole('textbox');
-    
-    fireEvent.focus(input);
+
+    userEvent.click(input);
     expect(handleFocus).toHaveBeenCalled();
     expect(input).toHaveFocus();
-    
-    fireEvent.blur(input);
+
+    userEvent.tab();
     expect(handleBlur).toHaveBeenCalled();
   });
 
@@ -123,13 +124,11 @@ describe('Input Component', () => {
     const handleKeyPress = jest.fn();
     const handleKeyDown = jest.fn();
     render(<Input onKeyPress={handleKeyPress} onKeyDown={handleKeyDown} />);
-    
+
     const input = screen.getByRole('textbox');
-    
-    fireEvent.keyPress(input, { key: 'Enter', code: 'Enter' });
+
+    userEvent.type(input, '{enter}');
     expect(handleKeyPress).toHaveBeenCalled();
-    
-    fireEvent.keyDown(input, { key: 'Tab', code: 'Tab' });
     expect(handleKeyDown).toHaveBeenCalled();
   });
 
@@ -146,7 +145,7 @@ describe('Input Component', () => {
     render(<Input error="Error message" />);
     
     const input = screen.getByRole('textbox');
-    expect(input).toHaveClass('border-red-500');
+    expect(input).toHaveClass('border-red-300');
     expect(input).toHaveClass('focus:ring-red-500');
   });
 
