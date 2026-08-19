@@ -34,80 +34,80 @@ const StudentDashboard: React.FC = () => {
   // failure in one shouldn't blank out data the others already loaded.
   const loadDashboardData = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
+    setLoadError(false);
+
+    let courses: CanvasCourse[] = [];
     try {
-      setLoading(true);
-      setLoadError(false);
-
       const coursesResponse = await canvasAPI.getCourses();
-      const courses: CanvasCourse[] = coursesResponse.data;
+      courses = coursesResponse.data;
+    } catch (error) {
+      console.error('Error loading courses:', error);
+      toast.error('Could not load your courses. Please try refreshing.');
+      setLoadError(true);
+    }
 
-      const [progressResults, badgesResult] = await Promise.all([
-        Promise.all(
-          courses.map((course) =>
-            progressAPI
-              .getSkillProgress(user.id, course.id)
-              .then((res) => ({ course, progress: res.data }))
-              .catch(() => ({ course, progress: null }))
-          )
-        ),
-        badgeAPI.getStudentEarnedBadges(user.canvas_student_id!).catch(() => null),
-      ]);
+    const [progressResults, badgesResult] = await Promise.all([
+      Promise.all(
+        courses.map((course) =>
+          progressAPI
+            .getSkillProgress(user.canvas_student_id!, course.id)
+            .then((res) => ({ course, progress: res.data }))
+            .catch(() => ({ course, progress: null }))
+        )
+      ),
+      badgeAPI.getStudentEarnedBadges(user.canvas_student_id!).catch(() => null),
+    ]);
 
-      const skills: AttemptedSkill[] = [];
-      const summaries: CourseOverviewSummary[] = [];
+    const skills: AttemptedSkill[] = [];
+    const summaries: CourseOverviewSummary[] = [];
 
-      progressResults.forEach(({ course, progress }) => {
-        const attempted = Object.entries(progress?.skill_progress ?? {}).filter(
-          ([, data]) => data.total_questions > 0
-        );
+    progressResults.forEach(({ course, progress }) => {
+      const attempted = Object.entries(progress?.skill_progress ?? {}).filter(
+        ([, data]) => data.total_questions > 0
+      );
 
-        attempted.forEach(([name, data]) => {
-          skills.push({ name, courseId: course.id, score: Math.round(data.score) });
-        });
-
-        const averageScore =
-          attempted.length > 0
-            ? Math.round(
-                attempted.reduce((sum, [, data]) => sum + data.score, 0) / attempted.length
-              )
-            : null;
-
-        const weakestSkill = attempted
-          .filter(([, data]) => tierForScore(data.score) === 'developing')
-          .sort((a, b) => a[1].score - b[1].score)[0];
-
-        let nextHint = 'Not started yet';
-        if (averageScore !== null) {
-          nextHint = weakestSkill ? `Review: ${weakestSkill[0]}` : 'On track';
-        }
-
-        summaries.push({
-          id: course.id,
-          name: course.name,
-          code: course.code,
-          averageScore,
-          nextHint,
-        });
+      attempted.forEach(([name, data]) => {
+        skills.push({ name, courseId: course.id, score: Math.round(data.score) });
       });
 
-      setAttemptedSkills(skills);
-      setCourseSummaries(summaries);
-      setBadges(
-        (badgesResult?.data.badges ?? []).map((badge) => ({
-          id: badge.badge_id,
-          skillName: badge.skill_name,
-          courseName: badge.course_name || 'Course',
-          level: badge.badge_level,
-          earnedAt: badge.earned_at,
-        }))
-      );
-    } catch (error) {
-      console.error('Error loading student dashboard:', error);
-      toast.error('Could not load your dashboard. Please try refreshing.');
-      setLoadError(true);
-    } finally {
-      setLoading(false);
-    }
+      const averageScore =
+        attempted.length > 0
+          ? Math.round(
+              attempted.reduce((sum, [, data]) => sum + data.score, 0) / attempted.length
+            )
+          : null;
+
+      const weakestSkill = attempted
+        .filter(([, data]) => tierForScore(data.score) === 'developing')
+        .sort((a, b) => a[1].score - b[1].score)[0];
+
+      let nextHint = 'Not started yet';
+      if (averageScore !== null) {
+        nextHint = weakestSkill ? `Review: ${weakestSkill[0]}` : 'On track';
+      }
+
+      summaries.push({
+        id: course.id,
+        name: course.name,
+        code: course.code,
+        averageScore,
+        nextHint,
+      });
+    });
+
+    setAttemptedSkills(skills);
+    setCourseSummaries(summaries);
+    setBadges(
+      (badgesResult?.data.badges ?? []).map((badge) => ({
+        id: badge.badge_id,
+        skillName: badge.skill_name,
+        courseName: badge.course_name || 'Course',
+        level: badge.badge_level,
+        earnedAt: badge.earned_at,
+      }))
+    );
+    setLoading(false);
   }, [user]);
 
   useEffect(() => {

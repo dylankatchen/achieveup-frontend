@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Settings, HelpCircle, LogOut, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
+import AccountMenu from './AccountMenu';
 import { User } from '../../../types';
 
 interface UserMenuProps {
@@ -10,12 +10,7 @@ interface UserMenuProps {
   onLogout: () => void;
 }
 
-const UserMenu: React.FC<UserMenuProps> = ({
-  user,
-  displayAsInstructor,
-  onHelpClick,
-  onLogout,
-}) => {
+const UserMenu: React.FC<UserMenuProps> = ({ user, displayAsInstructor, onHelpClick, onLogout }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
@@ -33,13 +28,9 @@ const UserMenu: React.FC<UserMenuProps> = ({
 
         {/* Name + Role */}
         <div className="hidden text-left leading-tight sm:block">
-          <p className="text-sm font-semibold text-gray-900">
-            {user?.name || user?.email || 'User'}
-          </p>
+          <p className="text-sm font-semibold text-gray-900">{user?.name || user?.email || 'User'}</p>
 
-          <p className="text-[11px] text-gray-400">
-            {displayAsInstructor ? 'Instructor' : 'Student'}
-          </p>
+          <p className="text-[11px] text-gray-400">{displayAsInstructor ? 'Instructor' : 'Student'}</p>
         </div>
 
         {/* Arrow */}
@@ -51,42 +42,12 @@ const UserMenu: React.FC<UserMenuProps> = ({
       {/* Dropdown */}
       {showUserMenu && (
         <div className="absolute right-0 top-full z-50 w-52 pt-2">
-          <div className="rounded-xl border border-gray-200 bg-white py-2 shadow-lg">
-            {/* Settings */}
-            <Link
-              to="/settings"
-              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Link>
-
-            {/* How It Works - Instructor only */}
-            {displayAsInstructor && (
-              <button
-                onClick={() => {
-                  onHelpClick();
-                  setShowUserMenu(false);
-                }}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              >
-                <HelpCircle className="h-4 w-4" />
-                How It Works
-              </button>
-            )}
-
-            {/* Divider */}
-            <div className="my-1 border-t border-gray-100" />
-
-            {/* Logout */}
-            <button
-              onClick={onLogout}
-              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </button>
-          </div>
+          <AccountMenu
+            displayAsInstructor={displayAsInstructor}
+            onHelpClick={onHelpClick}
+            onLogout={onLogout}
+            onItemClick={() => setShowUserMenu(false)}
+          />
         </div>
       )}
     </div>

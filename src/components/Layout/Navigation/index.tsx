@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { getNavigationItems } from './navigationItems';
 import DesktopSidebar from './DesktopSidebar';
 import DesktopHeader from './DesktopHeader';
+import MobileHeader from './MobileHeader';
 import MobileNav from './MobileNav';
 import HowItWorksModal from './HowItWorksModal';
 
@@ -53,30 +53,26 @@ const Navigation: React.FC = () => {
         />
       </div>
 
-      {/* mobile menu button */}
+      {/* mobile header: menu on the left, search, profile on the right */}
 
-      <div className="fixed right-4 top-4 z-50 md:hidden">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="inline-flex items-center justify-center rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-au-gold"
-        >
-          {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-      </div>
+      <MobileHeader
+        isNavOpen={isOpen}
+        onToggleNav={() => setIsOpen(!isOpen)}
+        displayAsInstructor={displayAsInstructor}
+        canSwitchToStudentView={canSwitchToStudentView}
+        viewingAsStudent={viewingAsStudent}
+        user={user}
+        onHelpClick={() => setShowHelpModal(true)}
+        onLogout={handleLogout}
+      />
 
-      {/* mobile navigation */}
+      {/* mobile navigation drawer */}
 
       {isOpen && (
         <MobileNav
-          user={user}
-          displayAsInstructor={displayAsInstructor}
           navigationItems={navigationItems}
           currentPath={location.pathname}
-          canSwitchToStudentView={canSwitchToStudentView}
-          viewingAsStudent={viewingAsStudent}
           onClose={() => setIsOpen(false)}
-          onHelpClick={() => setShowHelpModal(true)}
-          onLogout={handleLogout}
         />
       )}
 
