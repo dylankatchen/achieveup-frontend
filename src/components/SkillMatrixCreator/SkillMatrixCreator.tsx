@@ -499,6 +499,10 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({ courseId, onMat
           `Failed to get skill suggestions: ${errorMessage}. Please try again or enter skills manually.`
         );
       }
+
+      // Every branch above tells the user they can enter skills manually -
+      // actually let them, instead of leaving them stuck on this step.
+      setStep('review-skills');
     } finally {
       setSuggestionsLoading(false);
     }
@@ -751,7 +755,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({ courseId, onMat
           {/* Step 1: Course Selection */}
           {step === 'select-course' && (
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Select Course</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Step 1: Select Course</h3>
               {courses.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1038,7 +1042,6 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({ courseId, onMat
                   <Button
                     type="button"
                     onClick={getSkillSuggestions}
-                    loading={suggestionsLoading}
                     disabled={suggestionsLoading}
                     className="flex items-center"
                   >
