@@ -5,6 +5,7 @@ import { passwordRules } from '../utils/passwordPolicy';
 import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
 import { useAuth } from '../contexts/AuthContext';
+import toast from 'react-hot-toast';
 import Signup from './Signup';
 
 // Mock the AuthContext
@@ -43,6 +44,7 @@ describe('Signup Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.mocked(useAuth).mockReturnValue(mockAuthContext);
+    window.history.pushState({}, '', '/signup');
   });
 
   test('renders signup form correctly', () => {
@@ -52,7 +54,7 @@ describe('Signup Component', () => {
       </SignupWrapper>
     );
 
-    expect(screen.getByText('Create Instructor Account')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Create Account' })).toBeInTheDocument();
     expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
@@ -89,6 +91,7 @@ describe('Signup Component', () => {
       expect(screen.getByText('Email is required')).toBeInTheDocument();
       expect(screen.getByText('Password is required')).toBeInTheDocument();
       expect(screen.getByText('Please confirm your password')).toBeInTheDocument();
+      expect(screen.getByText('Canvas API token is required to sign up')).toBeInTheDocument();
     });
   });
 
@@ -166,7 +169,7 @@ describe('Signup Component', () => {
   });
 
   test('handles successful signup', async () => {
-    mockSignup.mockResolvedValue(true);
+    mockSignup.mockResolvedValue(undefined);
 
     render(
       <SignupWrapper>
@@ -196,13 +199,18 @@ describe('Signup Component', () => {
         email: 'john@example.com',
         password: 'Password123',
         canvasApiToken: validToken,
-        canvasTokenType: 'instructor'
       });
     });
+
+    // A successful signup should actually take the user somewhere and tell them it worked.
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/');
+    });
+    expect(jest.mocked(toast.success)).toHaveBeenCalledWith('Account created successfully!');
   });
 
-  test('handles signup failure', async () => {
-    mockSignup.mockResolvedValue(false);
+  test('shows an error toast and stays on the page when signup fails', async () => {
+    mockSignup.mockRejectedValue(new Error('Email already registered'));
 
     render(
       <SignupWrapper>
@@ -227,8 +235,12 @@ describe('Signup Component', () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockSignup).toHaveBeenCalled();
+      expect(jest.mocked(toast.error)).toHaveBeenCalledWith('Email already registered');
     });
+
+    // A failed signup must not navigate away or claim success.
+    expect(window.location.pathname).toBe('/signup');
+    expect(jest.mocked(toast.success)).not.toHaveBeenCalled();
   });
 
   test('shows loading state during signup', async () => {
@@ -283,7 +295,7 @@ describe('Signup Component', () => {
   });
 
   test('handles special characters in name', async () => {
-    mockSignup.mockResolvedValue(true);
+    mockSignup.mockResolvedValue(undefined);
 
     render(
       <SignupWrapper>
@@ -373,24 +385,5 @@ describe('Signup Component', () => {
 
     userEvent.tab();
     expect(emailInput).toHaveFocus();
-  });
-
-  test('handles backend unavailable state', () => {
-    const offlineAuthContext = {
-      ...mockAuthContext,
-      backendAvailable: false,
-    };
-
-    jest.mocked(useAuth).mockReturnValue(offlineAuthContext);
-
-    render(
-      <SignupWrapper>
-        <Signup />
-      </SignupWrapper>
-    );
-
-    // Should still render the form even when backend is unavailable
-    expect(screen.getByText('Create Instructor Account')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
   });
 }); 
