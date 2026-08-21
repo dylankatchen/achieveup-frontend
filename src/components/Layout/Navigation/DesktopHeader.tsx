@@ -31,7 +31,7 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
 
           <input
             type="text"
-            placeholder="Search skills, courses, or assignments..."
+            placeholder="Search skills or courses..."
             className="h-[42px] w-full rounded-lg border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-700 outline-none transition focus:border-au-gold focus:ring-1 focus:ring-au-gold"
           />
         </div>
