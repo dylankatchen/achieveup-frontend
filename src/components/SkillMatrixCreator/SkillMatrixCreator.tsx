@@ -281,6 +281,19 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({ courseId, onMat
     }
   };
 
+  // Deep-linked from search (e.g. /skill-matrix?courseId=123): once courses
+  // have loaded, jump straight past course selection for that course instead
+  // of leaving the user on step 1 with just the dropdown pre-filled.
+  const appliedInitialCourseRef = React.useRef(false);
+  useEffect(() => {
+    if (appliedInitialCourseRef.current || !courseId || courses.length === 0) return;
+    if (courses.some((c) => c.id === courseId)) {
+      appliedInitialCourseRef.current = true;
+      handleCourseSelect(courseId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId, courses]);
+
   const loadExistingMatrices = async (courseId: string) => {
     try {
       setLoadingExistingMatrices(true);

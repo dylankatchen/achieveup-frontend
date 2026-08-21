@@ -43,10 +43,12 @@ const CourseSearch: React.FC<CourseSearchProps> = ({ variant, displayAsInstructo
         )
       : [];
 
-  const handleSelect = (): void => {
+  const handleSelect = (course: CanvasCourse): void => {
     setQuery('');
     setIsOpen(false);
-    navigate(displayAsInstructor ? '/skill-matrix' : '/student-dashboard');
+    navigate(
+      displayAsInstructor ? `/skill-matrix?courseId=${course.id}` : '/student-dashboard'
+    );
     onNavigate?.();
   };
 
@@ -99,7 +101,7 @@ const CourseSearch: React.FC<CourseSearchProps> = ({ variant, displayAsInstructo
               results.slice(0, 8).map((course) => (
                 <button
                   key={course.id}
-                  onClick={handleSelect}
+                  onClick={() => handleSelect(course)}
                   className="flex w-full flex-col items-start px-4 py-2.5 text-left hover:bg-gray-50"
                 >
                   <span className="text-sm font-medium text-gray-900">{course.name}</span>
