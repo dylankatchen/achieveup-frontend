@@ -1,81 +1,112 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { canvasAPI, badgeAPI } from '../services/api';
+import { canvasAPI, progressAPI, badgeAPI } from '../services/api';
 import { CanvasCourse } from '../types';
 import { toast } from 'react-hot-toast';
 import Card from '../components/common/Card';
-import {
-  Home,
-  Award,
-  Target,
-  CheckCircle,
-  AlertTriangle,
-  BookOpen,
-  Settings,
-  Clock,
-  Medal,
-} from 'lucide-react';
+import MasteryRing from '../components/StudentPortal/MasteryRing';
+import SkillMasteryList, {
+  SkillMasterySummary,
+} from '../components/StudentPortal/SkillMasteryList';
+import RecentBadgesGrid, { RecentBadgeSummary } from '../components/StudentPortal/RecentBadgesGrid';
+import CourseOverviewGrid, {
+  CourseOverviewSummary,
+} from '../components/StudentPortal/CourseOverviewGrid';
+import { tierForScore, tierLabel } from '../utils/skillTiers';
+import { BookOpen, Award, Sparkles, Info, AlertTriangle } from 'lucide-react';
 
-interface EarnedBadge {
-  badge_id: string;
-  badge_name: string;
-  skill_name: string;
-  badge_level: string;
-  progress_percentage: number;
-  earned_at: string;
-  course_id: string;
-  course_name: string;
+interface AttemptedSkill {
+  name: string;
+  courseId: string;
+  score: number;
 }
-
-const BADGE_LEVEL_COLORS: Record<string, string> = {
-  beginner: 'bg-blue-100 text-blue-700',
-  intermediate: 'bg-purple-100 text-purple-700',
-  advanced: 'bg-green-100 text-green-700',
-  expert: 'bg-yellow-100 text-yellow-700',
-};
 
 const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [courses, setCourses] = useState<CanvasCourse[]>([]);
-  const [coursesError, setCoursesError] = useState(false);
-  const [badges, setBadges] = useState<EarnedBadge[]>([]);
-  const [badgesError, setBadgesError] = useState(false);
+  const [courseSummaries, setCourseSummaries] = useState<CourseOverviewSummary[]>([]);
+  const [attemptedSkills, setAttemptedSkills] = useState<AttemptedSkill[]>([]);
+  const [badges, setBadges] = useState<RecentBadgeSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  // A Canvas API token is mandatory at signup, so every account reaching this
-  // dashboard is guaranteed to have one — but that doesn't guarantee Canvas
-  // itself is reachable right now, so a fetch failure is tracked separately
-  // from "the token has no courses."
+  // Canvas is mandatory at signup, so every account here has a token — but
+  // per-course skill progress and badges are fetched separately below, so a
+  // failure in one shouldn't blank out data the others already loaded.
   const loadDashboardData = useCallback(async () => {
+    if (!user) return;
     setLoading(true);
+    setLoadError(false);
 
+    let courses: CanvasCourse[] = [];
     try {
-      // canvasAPI.getCourses() is token-type-agnostic — it just returns whatever
-      // courses the stored token has access to.
-      const response = await canvasAPI.getCourses();
-      setCourses(response.data);
-      setCoursesError(false);
+      const coursesResponse = await canvasAPI.getCourses();
+      courses = coursesResponse.data;
     } catch (error) {
       console.error('Error loading courses:', error);
-      toast.error('Could not load courses from Canvas. Please try refreshing.');
-      setCourses([]);
-      setCoursesError(true);
+      toast.error('Could not load your courses. Please try refreshing.');
+      setLoadError(true);
     }
 
-    // canvas_student_id links this account to the mastery/badge data Canvas
-    // activity has already generated — it's guaranteed present, populated at
-    // signup as part of the mandatory Canvas token validation.
-    try {
-      const badgeResponse = await badgeAPI.getStudentEarnedBadges(user!.canvas_student_id!);
-      setBadges(badgeResponse.data.badges);
-      setBadgesError(false);
-    } catch (error) {
-      console.error('Error loading badges:', error);
-      setBadges([]);
-      setBadgesError(true);
-    }
+    const [progressResults, badgesResult] = await Promise.all([
+      Promise.all(
+        courses.map((course) =>
+          progressAPI
+            .getSkillProgress(user.canvas_student_id!, course.id)
+            .then((res) => ({ course, progress: res.data }))
+            .catch(() => ({ course, progress: null }))
+        )
+      ),
+      badgeAPI.getStudentEarnedBadges(user.canvas_student_id!).catch(() => null),
+    ]);
 
+    const skills: AttemptedSkill[] = [];
+    const summaries: CourseOverviewSummary[] = [];
+
+    progressResults.forEach(({ course, progress }) => {
+      const attempted = Object.entries(progress?.skill_progress ?? {}).filter(
+        ([, data]) => data.total_questions > 0
+      );
+
+      attempted.forEach(([name, data]) => {
+        skills.push({ name, courseId: course.id, score: Math.round(data.score) });
+      });
+
+      const averageScore =
+        attempted.length > 0
+          ? Math.round(
+              attempted.reduce((sum, [, data]) => sum + data.score, 0) / attempted.length
+            )
+          : null;
+
+      const weakestSkill = attempted
+        .filter(([, data]) => tierForScore(data.score) === 'developing')
+        .sort((a, b) => a[1].score - b[1].score)[0];
+
+      let nextHint = 'Not started yet';
+      if (averageScore !== null) {
+        nextHint = weakestSkill ? `Review: ${weakestSkill[0]}` : 'On track';
+      }
+
+      summaries.push({
+        id: course.id,
+        name: course.name,
+        code: course.code,
+        averageScore,
+        nextHint,
+      });
+    });
+
+    setAttemptedSkills(skills);
+    setCourseSummaries(summaries);
+    setBadges(
+      (badgesResult?.data.badges ?? []).map((badge) => ({
+        id: badge.badge_id,
+        skillName: badge.skill_name,
+        courseName: badge.course_name || 'Course',
+        level: badge.badge_level,
+        earnedAt: badge.earned_at,
+      }))
+    );
     setLoading(false);
   }, [user]);
 
@@ -83,186 +114,206 @@ const StudentDashboard: React.FC = () => {
     loadDashboardData();
   }, [loadDashboardData]);
 
-  const getGreeting = () => {
+  const getGreeting = (): string => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
   };
 
+  const overallMastery =
+    attemptedSkills.length > 0
+      ? Math.round(
+          attemptedSkills.reduce((sum, skill) => sum + skill.score, 0) / attemptedSkills.length
+        )
+      : 0;
+
+  const masteredCount = attemptedSkills.filter(
+    (skill) => tierForScore(skill.score) !== 'developing'
+  ).length;
+
+  const topSkills: SkillMasterySummary[] = [...attemptedSkills]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map((skill) => ({ name: skill.name, score: skill.score }));
+
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ucf-gold"></div>
-        </div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-au-gold" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Welcome Section */}
-      <div className="mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            {getGreeting()}, {user?.name || 'Student'}!
-          </h1>
-          <p className="text-gray-600 mt-2">Track your courses and skill progress in one place.</p>
-        </div>
+    <div className="flex w-full flex-col gap-6">
+      <div className="mb-1">
+        <h1 className="text-[28px] font-bold tracking-tight text-gray-900">
+          {getGreeting()}, {user?.name?.split(' ')[0] || 'Student'}!
+        </h1>
 
-        {/* Status Indicators */}
-        <div className="mt-4 flex items-center gap-3 flex-wrap">
-          <div className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-            <div className="flex items-center">
-              <div className="w-2 h-2 bg-current rounded-full mr-2"></div>
-              Student Dashboard
-            </div>
-          </div>
-          {coursesError ? (
-            <div className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-              <AlertTriangle className="w-3 h-3 mr-1 inline" />
-              Canvas Connection Issue
-            </div>
-          ) : (
-            <div className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-              <CheckCircle className="w-3 h-3 mr-1 inline" />
-              Canvas Connected
-            </div>
-          )}
-          {courses.length > 0 && (
-            <div className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-              <BookOpen className="w-3 h-3 mr-1 inline" />
-              {courses.length} Course{courses.length !== 1 ? 's' : ''} Loaded
-            </div>
-          )}
-        </div>
+        <p className="mt-1.5 text-sm text-gray-600">
+          Here's an overview of your learning progress.
+        </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="text-center hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-lg mx-auto mb-4">
-            <Home className="w-6 h-6 text-blue-600" />
+      {loadError && (
+        <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+          Some of your data couldn't be loaded from Canvas. Try refreshing the page.
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+        {/* Overall Mastery */}
+        <Card className="h-[220px] p-6">
+          <div className="flex h-full flex-col">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[15px] font-semibold text-gray-900">Overall Mastery</span>
+
+              <Info
+                className="h-4 w-4 text-gray-400"
+                aria-label="Average mastery across every skill you've attempted"
+              />
+            </div>
+
+            {/* BOTTOM SECTION */}
+            <div className="mt-4 flex min-h-0 flex-1 items-center">
+              {/* LEFT - mastery ring */}
+              <div className="flex flex-1 items-center justify-center pr-5">
+                <MasteryRing percent={overallMastery}>
+                  <span className="text-[28px] font-bold leading-none text-gray-900">
+                    {overallMastery}%
+                  </span>
+
+                  <span className="mt-1 text-[11px] font-medium text-gray-600">
+                    {tierLabel[tierForScore(overallMastery)]}
+                  </span>
+                </MasteryRing>
+              </div>
+
+              {/* divider */}
+              <div className="h-[105px] w-px flex-shrink-0 bg-gray-200" />
+
+              {/* right - description */}
+              <div className="flex flex-1 items-center pl-6">
+                <p className="max-w-[155px] text-[13px] leading-5 text-gray-600">
+                  {masteredCount > 0
+                    ? "You're making great progress! Keep mastering new skills."
+                    : "You haven't mastered a skill yet — keep going, it adds up fast."}
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{courses.length}</div>
-          <div className="text-sm text-gray-600">Active Courses</div>
-          <div className="text-xs text-gray-500 mt-1">From Canvas LMS</div>
         </Card>
 
-        <Card className="text-center hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-lg mx-auto mb-4">
-            <Target className="w-6 h-6 text-purple-600" />
+        {/* active Courses */}
+        <Card className="h-[220px] p-6">
+          <div className="flex h-full flex-col">
+            <div className="flex items-center gap-3">
+              <div className="flex h-[46px] w-[46px] items-center justify-center rounded-xl bg-au-gold-light text-au-gold-dark">
+                <BookOpen className="h-6 w-6" />
+              </div>
+
+              <span className="text-[15px] font-semibold text-gray-900">Active Courses</span>
+            </div>
+
+            <div className="mt-5 text-[32px] font-bold leading-none text-gray-900">
+              {courseSummaries.length}
+            </div>
+
+            <div className="mt-2 text-[13px] text-gray-500">Courses</div>
+
+            <div className="mt-auto text-[13px] font-semibold text-au-gold-dark">
+              View my courses →
+            </div>
           </div>
-          <div className="text-2xl font-bold text-gray-900">
-            {new Set(badges.map((b) => b.skill_name)).size}
-          </div>
-          <div className="text-sm text-gray-600">Skills Mastered</div>
-          <div className="text-xs text-gray-500 mt-1">Distinct skills earned</div>
         </Card>
 
-        <Card className="text-center hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-center w-12 h-12 bg-yellow-100 rounded-lg mx-auto mb-4">
-            <Award className="w-6 h-6 text-yellow-600" />
+        {/* Badges Earned */}
+        <Card className="h-[220px] p-6">
+          <div className="flex h-full flex-col">
+            <div className="flex items-center gap-3">
+              <div className="flex h-[46px] w-[46px] items-center justify-center rounded-xl bg-au-gold-light text-au-gold-dark">
+                <Award className="h-6 w-6" />
+              </div>
+
+              <span className="text-[15px] font-semibold text-gray-900">Badges Earned</span>
+            </div>
+
+            <div className="mt-5 text-[32px] font-bold leading-none text-gray-900">
+              {badges.length}
+            </div>
+
+            <div className="mt-2 text-[13px] text-gray-500">Badges</div>
+
+            <div className="mt-auto text-[13px] font-semibold text-au-gold-dark">
+              View all badges →
+            </div>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{badges.length}</div>
-          <div className="text-sm text-gray-600">Badges Earned</div>
-          <div className="text-xs text-gray-500 mt-1">Across all courses</div>
+        </Card>
+
+        {/* Skills Earned */}
+        <Card className="h-[220px] p-6">
+          <div className="flex h-full flex-col">
+            <div className="flex items-center gap-3">
+              <div className="flex h-[46px] w-[46px] items-center justify-center rounded-xl bg-au-gold-light text-au-gold-dark">
+                <Sparkles className="h-6 w-6" />
+              </div>
+
+              <span className="text-[15px] font-semibold text-gray-900">Skills Earned</span>
+            </div>
+
+            <div className="mt-5 text-[32px] font-bold leading-none text-gray-900">
+              {masteredCount}
+            </div>
+
+            <div className="mt-2 text-[13px] text-gray-500">Skills</div>
+
+            <div className="mt-auto text-[13px] font-semibold text-au-gold-dark">
+              View all skills →
+            </div>
+          </div>
         </Card>
       </div>
 
-      {/* My Courses */}
-      <Card title="My Courses" className="mb-8">
-        {coursesError ? (
-          <div className="text-center py-8">
-            <AlertTriangle className="w-10 h-10 text-red-300 mx-auto mb-3" />
-            <p className="text-gray-600 font-medium">Couldn't load your courses from Canvas</p>
-            <p className="text-sm text-gray-500 mt-1">Please try refreshing the page.</p>
-          </div>
-        ) : courses.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">No courses found in Canvas.</div>
-        ) : (
-          <div className="space-y-3">
-            {courses.map((course) => (
-              <div
-                key={course.id}
-                className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
-              >
-                <div className="flex items-center">
-                  <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg mr-4">
-                    <BookOpen className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{course.name}</p>
-                    <p className="text-sm text-gray-500">{course.code}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {/* Skills & Badges */}
-      <Card title="Skills & Badges" className="mb-8">
-        {badgesError ? (
-          <div className="text-center py-8">
-            <Clock className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-600 font-medium">Couldn't load your badges right now</p>
-            <p className="text-sm text-gray-500 mt-1">Please try refreshing the page.</p>
-          </div>
-        ) : badges.length === 0 ? (
-          <div className="text-center py-8">
-            <Medal className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-600 font-medium">No badges earned yet</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Badges appear here as you master skills in your courses.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {badges.map((badge) => (
-              <div
-                key={badge.badge_id}
-                className="flex items-start p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
-              >
-                <div className="flex items-center justify-center w-10 h-10 bg-yellow-100 rounded-lg mr-4 flex-shrink-0">
-                  <Medal className="w-5 h-5 text-yellow-600" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-medium text-gray-900 truncate">{badge.badge_name}</p>
-                  <p className="text-sm text-gray-500 truncate">
-                    {badge.skill_name} · {badge.course_name}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
-                        BADGE_LEVEL_COLORS[badge.badge_level] || 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {badge.badge_level}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      Earned {new Date(badge.earned_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {/* Settings shortcut */}
-      <div className="flex justify-end">
-        <Link
-          to="/settings"
-          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1fr]">
+        <Card
+          className="min-h-[300px]"
+          title="Top Skills"
+          headerActions={
+            <span className="text-[13px] font-semibold text-gray-300" title="Coming soon">
+              View all skills →
+            </span>
+          }
         >
-          <Settings className="w-4 h-4 mr-2" />
-          Manage Canvas Token
-        </Link>
+          <SkillMasteryList skills={topSkills} />
+        </Card>
+
+        <Card
+          className="min-h-[300px]"
+          title="Recent Badges"
+          headerActions={
+            <span className="text-[13px] font-semibold text-gray-300" title="Coming soon">
+              View all badges →
+            </span>
+          }
+        >
+          <RecentBadgesGrid badges={badges.slice(0, 5)} />
+        </Card>
       </div>
+
+      <Card
+        className="min-h-[220px]"
+        title="Course Overview"
+        headerActions={
+          <span className="text-[13px] font-semibold text-gray-300" title="Coming soon">
+            View all courses →
+          </span>
+        }
+      >
+        <CourseOverviewGrid courses={courseSummaries} />
+      </Card>
     </div>
   );
 };

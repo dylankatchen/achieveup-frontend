@@ -39,6 +39,18 @@ module.exports = {
           800: '#1f2937',
           900: '#111827',
         },
+
+        // Student portal ("au") palette. Status colors (green/blue/purple/red)
+        // and text colors (navy/body/muted) intentionally reuse the standard
+        // gray/green/blue/purple/red scales above/below since they match
+        // exactly (e.g. navy #111827 === secondary-900, body #374151 ===
+        // secondary-700). Only the gold accent and app background are new.
+        au: {
+          bg: '#f7f6f3',
+          gold: '#ffb000',
+          'gold-light': '#fff4dd',
+          'gold-dark': '#995f00',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
