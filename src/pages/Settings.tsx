@@ -319,11 +319,11 @@ const Settings: React.FC = () => {
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700">Full Name *</label>
-                  <Input name="name" type="text" value={profile.name} onChange={handleChange} placeholder="Enter your full name" required />
+                  <Input id="name" name="name" type="text" value={profile.name} onChange={handleChange} placeholder="Enter your full name" required />
                 </div>
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address *</label>
-                  <Input name="email" type="email" value={profile.email} onChange={handleChange} placeholder="your.email@example.com" required />
+                  <Input id="email" name="email" type="email" value={profile.email} onChange={handleChange} placeholder="your.email@example.com" required />
                 </div>
                 <div className="flex gap-3 pt-4">
                   <Button type="submit" loading={loading} disabled={loading}><Save className="w-4 h-4 mr-2" />Save</Button>
@@ -513,15 +513,15 @@ const Settings: React.FC = () => {
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
                 <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700">Current Password *</label>
-                <Input name="currentPassword" type="password" value={profile.currentPassword} onChange={handleChange} placeholder="Enter your current password" required />
+                <Input id="currentPassword" name="currentPassword" type="password" value={profile.currentPassword} onChange={handleChange} placeholder="Enter your current password" required />
               </div>
               <div>
                 <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">New Password *</label>
-                <Input name="newPassword" type="password" value={profile.newPassword} onChange={handleChange} placeholder="Enter your new password" required />
+                <Input id="newPassword" name="newPassword" type="password" value={profile.newPassword} onChange={handleChange} placeholder="Enter your new password" required />
               </div>
               <div>
                 <label htmlFor="confirmNewPassword" className="block text-sm font-medium text-gray-700">Confirm New Password *</label>
-                <Input name="confirmNewPassword" type="password" value={profile.confirmNewPassword} onChange={handleChange} placeholder="Confirm your new password" required />
+                <Input id="confirmNewPassword" name="confirmNewPassword" type="password" value={profile.confirmNewPassword} onChange={handleChange} placeholder="Confirm your new password" required />
               </div>
               <Button type="submit" loading={loading} disabled={loading}>Change Password</Button>
             </form>

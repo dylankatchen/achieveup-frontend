@@ -72,25 +72,6 @@ const BadgesDashboard: React.FC<BadgesDashboardProps> = ({ courseId }) => {
                     return;
                 }
 
-                try {
-                } catch (error) {
-                    console.log('Could not load student analytics:', error);
-                    // If we can't load analytics, create badges with no student data
-                    const emptyBadges: BadgeData[] = uniqueSkills.map((skillName, index) => ({
-                        id: `badge-${index}`,
-                        name: `${skillName} Badge`,
-                        description: `Awarded for demonstrating proficiency in ${skillName}`,
-                        skill_name: skillName,
-                        level: 'intermediate',
-                        badge_type: 'skill',
-                        studentsEarned: [],
-                        studentsNotEarned: []
-                    }));
-                    setBadges(emptyBadges);
-                    setLoading(false);
-                    return;
-                }
-
                 // Create a badge for each skill
                 const skillBadges: BadgeData[] = uniqueSkills.map((skillName, index) => {
                     // Determine badge level based on skill name or index

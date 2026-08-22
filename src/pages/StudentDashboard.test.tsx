@@ -3,13 +3,17 @@ import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import StudentDashboard from './StudentDashboard';
 
+// id and canvas_student_id are deliberately different values - the real bug
+// this once caught (progressAPI.getSkillProgress called with user.id instead
+// of user.canvas_student_id) is invisible to a mock where both happen to be
+// the same string.
 const mockAuthContext = {
   user: {
-    id: 'student-1',
+    id: 'auth-user-1',
     name: 'Jordan Miller',
     email: 'jordan@example.com',
     role: 'student' as const,
-    canvas_student_id: 'student-1',
+    canvas_student_id: 'canvas-student-1',
   },
 };
 
@@ -75,8 +79,8 @@ describe('StudentDashboard', () => {
       expect(screen.getByText(/Jordan/)).toBeInTheDocument();
     });
 
-    expect(mockGetSkillProgress).toHaveBeenCalledWith('student-1', 'course-1');
-    expect(mockGetStudentEarnedBadges).toHaveBeenCalledWith('student-1');
+    expect(mockGetSkillProgress).toHaveBeenCalledWith('canvas-student-1', 'course-1');
+    expect(mockGetStudentEarnedBadges).toHaveBeenCalledWith('canvas-student-1');
 
     // With only one attempted skill at 92%, the same number legitimately
     // appears three times: the mastery ring, its Top Skills row, and its
@@ -111,5 +115,28 @@ describe('StudentDashboard', () => {
       ).toBeInTheDocument();
     });
     expect(screen.getByText(/no badges earned yet/i)).toBeInTheDocument();
+  });
+
+  test('shows a loading spinner before data resolves', () => {
+    mockGetCourses.mockReturnValue(new Promise(() => {}));
+    const { container } = render(<StudentDashboard />);
+
+    expect(container.querySelector('.animate-spin')).toBeInTheDocument();
+  });
+
+  test('a courses-load failure shows the error banner but does not prevent badges from loading independently (not one shared try/catch)', async () => {
+    mockGetCourses.mockRejectedValue(new Error('Canvas unavailable'));
+
+    render(<StudentDashboard />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/some of your data couldn't be loaded from canvas/i)
+      ).toBeInTheDocument();
+    });
+    // Badges come from a fully separate endpoint - a courses failure
+    // shouldn't blank them out.
+    expect(mockGetStudentEarnedBadges).toHaveBeenCalledWith('canvas-student-1');
+    expect(screen.getByText('Recursion')).toBeInTheDocument();
   });
 });
