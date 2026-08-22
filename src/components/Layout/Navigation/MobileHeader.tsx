@@ -33,6 +33,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
         {/* Menu */}
         <button
           onClick={onToggleNav}
+          aria-label="Toggle navigation menu"
           className="flex flex-shrink-0 items-center justify-center rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-au-gold"
         >
           {isNavOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}

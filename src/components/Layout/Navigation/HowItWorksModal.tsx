@@ -14,7 +14,7 @@ const HowItWorksModal: React.FC<HowItWorksModalProps> = ({ onClose }) => {
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
           <h2 className="text-xl font-semibold text-gray-900">How AchieveUp Works</h2>
 
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
             <X className="h-6 w-6" />
           </button>
         </div>
