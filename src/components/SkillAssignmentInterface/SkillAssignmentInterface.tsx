@@ -1430,23 +1430,6 @@ const SkillAssignmentInterface: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* AI Analysis Results - Temporarily disabled */}
-                          {false && (
-                            <div className="bg-blue-50 rounded-lg p-4 mb-4">
-                              <h4 className="text-sm font-medium text-blue-900 mb-2">
-                                AI Analysis
-                              </h4>
-                              <div className="flex items-center space-x-4 text-sm">
-                                <span className="text-blue-700">
-                                  Complexity: <span className="font-medium">medium</span>
-                                </span>
-                                <span className="text-blue-700">
-                                  Confidence: <span className="font-medium">85%</span>
-                                </span>
-                              </div>
-                            </div>
-                          )}
-
                           {/* AI Suggestions */}
                           {questionSuggestions.length > 0 && (
                             <div className="mb-4">
