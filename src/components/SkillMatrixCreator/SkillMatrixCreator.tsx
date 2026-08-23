@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   BookOpen,
@@ -12,9 +12,10 @@ import {
   Lightbulb,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { skillMatrixAPI, canvasAPI, courseDescriptionAPI } from '../../services/api';
+import { skillMatrixAPI, courseDescriptionAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { SkillMatrix } from '../../types';
+import { useCourseList } from '../../hooks/useCourseList';
 import Button from '../common/Button';
 import Card from '../common/Card';
 
@@ -39,7 +40,6 @@ interface SkillSuggestion {
 
 const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({ courseId, onMatrixCreated }) => {
   const { user } = useAuth();
-  const [courses, setCourses] = useState<CanvasCourse[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>(courseId || '');
   const [selectedCourseData, setSelectedCourseData] = useState<CanvasCourse | null>(null);
   const [selectedPastCourse, setSelectedPastCourse] = useState<string>('');
@@ -60,6 +60,13 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({ courseId, onMat
   const [loadingExistingMatrices, setLoadingExistingMatrices] = useState(false);
   const [showImportBox, setShowImportBox] = useState(true);
   const { isInstructor } = useAuth();
+  const { courses, loading: coursesLoading, error: coursesError } = useCourseList<CanvasCourse>(isInstructor);
+
+  useEffect(() => {
+    if (coursesError) {
+      toast.error('Failed to load courses. Please check your Canvas integration.');
+    }
+  }, [coursesError]);
 
   // inline edit state
   const [editingMatrixId, setEditingMatrixId] = useState<string | null>(null);
@@ -210,25 +217,6 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({ courseId, onMat
     setValue,
   } = useForm<{ matrixName: string; description?: string }>();
 
-  const loadCourses = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = isInstructor
-        ? await canvasAPI.getInstructorCourses()
-        : await canvasAPI.getCourses();
-      setCourses(response.data);
-    } catch (error) {
-      console.error('Error loading courses:', error);
-      toast.error('Failed to load courses. Please check your Canvas integration.');
-    } finally {
-      setLoading(false);
-    }
-  }, [isInstructor]);
-
-  useEffect(() => {
-    loadCourses();
-  }, [loadCourses]);
-
   const getSection = (courseCode: string) => {
     const parts = courseCode.split(' ');
     return parts[1]; // "0002"
@@ -283,12 +271,16 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({ courseId, onMat
 
   // Deep-linked from search (e.g. /skill-matrix?courseId=123): once courses
   // have loaded, jump straight past course selection for that course instead
-  // of leaving the user on step 1 with just the dropdown pre-filled.
-  const appliedInitialCourseRef = React.useRef(false);
+  // of leaving the user on step 1 with just the dropdown pre-filled. Tracks
+  // the last courseId it applied (not just "has it ever run") so picking a
+  // *different* course from search while already on this page still works —
+  // a plain one-time flag would silently ignore every pick after the first.
+  const appliedCourseIdRef = React.useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (appliedInitialCourseRef.current || !courseId || courses.length === 0) return;
+    if (!courseId || courses.length === 0) return;
+    if (appliedCourseIdRef.current === courseId) return;
     if (courses.some((c) => c.id === courseId)) {
-      appliedInitialCourseRef.current = true;
+      appliedCourseIdRef.current = courseId;
       handleCourseSelect(courseId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -744,7 +736,7 @@ const SkillMatrixCreator: React.FC<SkillMatrixCreatorProps> = ({ courseId, onMat
   };
 
   // Loading state for initial course load
-  if (loading && courses.length === 0) {
+  if (coursesLoading && courses.length === 0) {
     return (
       <div className="max-w-4xl mx-auto p-6">
         <div className="flex justify-center items-center h-64">

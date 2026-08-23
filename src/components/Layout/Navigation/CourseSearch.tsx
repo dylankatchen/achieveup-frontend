@@ -1,8 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
-import { canvasAPI } from '../../../services/api';
 import { CanvasCourse } from '../../../types';
+import { useCourseList } from '../../../hooks/useCourseList';
 
 interface CourseSearchProps {
   variant: 'desktop' | 'mobile';
@@ -13,25 +13,8 @@ interface CourseSearchProps {
 const CourseSearch: React.FC<CourseSearchProps> = ({ variant, displayAsInstructor, onNavigate }) => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
-  const [courses, setCourses] = useState<CanvasCourse[]>([]);
-  const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const hasFetchedRef = useRef(false);
-
-  const loadCourses = async () => {
-    if (hasFetchedRef.current) return;
-    hasFetchedRef.current = true;
-    setLoading(true);
-    try {
-      const response = await canvasAPI.getCourses();
-      setCourses(response.data);
-    } catch (error) {
-      console.error('Error loading courses for search:', error);
-      hasFetchedRef.current = false;
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { courses, loading, ensureLoaded } = useCourseList(displayAsInstructor, { eager: false });
 
   const trimmedQuery = query.trim().toLowerCase();
   const results =
@@ -72,7 +55,7 @@ const CourseSearch: React.FC<CourseSearchProps> = ({ variant, displayAsInstructo
         onChange={(event) => setQuery(event.target.value)}
         onFocus={() => {
           setIsOpen(true);
-          loadCourses();
+          ensureLoaded();
         }}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {
