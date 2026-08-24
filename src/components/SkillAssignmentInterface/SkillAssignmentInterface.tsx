@@ -15,16 +15,10 @@ import toast from 'react-hot-toast';
 import { skillAssignmentAPI, canvasAPI, skillMatrixAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCourseList } from '../../hooks/useCourseList';
+import { CanvasCourse } from '../../types';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Card from '../common/Card';
-
-interface CanvasCourse {
-  id: string;
-  name: string;
-  code: string;
-  term: number;
-}
 
 interface CanvasQuiz {
   id: string;

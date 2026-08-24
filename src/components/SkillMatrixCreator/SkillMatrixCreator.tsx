@@ -14,7 +14,7 @@ import {
 import toast from 'react-hot-toast';
 import { skillMatrixAPI, courseDescriptionAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { SkillMatrix } from '../../types';
+import { SkillMatrix, CanvasCourse } from '../../types';
 import { useCourseList } from '../../hooks/useCourseList';
 import Button from '../common/Button';
 import Card from '../common/Card';
@@ -22,14 +22,6 @@ import Card from '../common/Card';
 interface SkillMatrixCreatorProps {
   courseId?: string;
   onMatrixCreated?: (matrix: SkillMatrix) => void;
-}
-
-interface CanvasCourse {
-  id: string;
-  name: string;
-  code: string;
-  term: number;
-  description?: string;
 }
 
 interface SkillSuggestion {

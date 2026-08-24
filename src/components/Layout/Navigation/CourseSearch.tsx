@@ -2,19 +2,24 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { CanvasCourse } from '../../../types';
-import { useCourseList } from '../../../hooks/useCourseList';
+import { CourseSearchState } from './types';
 
 interface CourseSearchProps {
   variant: 'desktop' | 'mobile';
   displayAsInstructor: boolean;
+  courseSearch: CourseSearchState;
   onNavigate?: () => void;
 }
 
-const CourseSearch: React.FC<CourseSearchProps> = ({ variant, displayAsInstructor, onNavigate }) => {
+const CourseSearch: React.FC<CourseSearchProps> = ({
+  variant,
+  displayAsInstructor,
+  courseSearch: { courses, loading, error, ensureLoaded },
+  onNavigate,
+}) => {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const { courses, loading, ensureLoaded } = useCourseList(displayAsInstructor, { eager: false });
 
   const trimmedQuery = query.trim().toLowerCase();
   const results =
@@ -41,35 +46,40 @@ const CourseSearch: React.FC<CourseSearchProps> = ({ variant, displayAsInstructo
 
   return (
     <div className={isDesktop ? 'relative w-full max-w-[500px]' : 'relative min-w-0 flex-1'}>
-      <Search
-        className={
-          isDesktop
-            ? 'pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-400'
-            : 'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400'
-        }
-      />
-
-      <input
-        type="text"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        onFocus={() => {
-          setIsOpen(true);
-          ensureLoaded();
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            closeDropdown();
-            event.currentTarget.blur();
+      {/* Icon + input sit above the backdrop (z-40 below) so clicking back
+          into the box while the dropdown is open reaches the input instead
+          of the invisible close-on-outside-click layer. */}
+      <div className="relative z-50">
+        <Search
+          className={
+            isDesktop
+              ? 'pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-400'
+              : 'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400'
           }
-        }}
-        placeholder="Search courses..."
-        className={
-          isDesktop
-            ? 'h-[42px] w-full rounded-lg border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-700 outline-none transition focus:border-au-gold focus:ring-1 focus:ring-au-gold'
-            : 'h-9 w-full rounded-full border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-700 outline-none transition focus:border-au-gold focus:bg-white focus:ring-1 focus:ring-au-gold'
-        }
-      />
+        />
+
+        <input
+          type="text"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onFocus={() => {
+            setIsOpen(true);
+            ensureLoaded();
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              closeDropdown();
+              event.currentTarget.blur();
+            }
+          }}
+          placeholder="Search courses..."
+          className={
+            isDesktop
+              ? 'h-[42px] w-full rounded-lg border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-700 outline-none transition focus:border-au-gold focus:ring-1 focus:ring-au-gold'
+              : 'h-9 w-full rounded-full border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-700 outline-none transition focus:border-au-gold focus:bg-white focus:ring-1 focus:ring-au-gold'
+          }
+        />
+      </div>
 
       {isOpen && trimmedQuery.length > 0 && (
         <>
@@ -78,6 +88,10 @@ const CourseSearch: React.FC<CourseSearchProps> = ({ variant, displayAsInstructo
           <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-xl border border-gray-200 bg-white py-2 shadow-lg">
             {loading ? (
               <p className="px-4 py-3 text-sm text-gray-500">Loading courses…</p>
+            ) : error ? (
+              <p className="px-4 py-3 text-sm text-red-600">
+                Couldn't load your courses. Please try again.
+              </p>
             ) : results.length === 0 ? (
               <p className="px-4 py-3 text-sm text-gray-500">No courses found</p>
             ) : (

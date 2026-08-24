@@ -3,14 +3,17 @@ import { Link } from 'react-router-dom';
 import { Menu, X, BookOpen } from 'lucide-react';
 import AccountMenu from './AccountMenu';
 import CourseSearch from './CourseSearch';
+import { CourseSearchState } from './types';
 import { User } from '../../../types';
 
 interface MobileHeaderProps {
   isNavOpen: boolean;
   onToggleNav: () => void;
+  onCloseNav: () => void;
   displayAsInstructor: boolean;
   canSwitchToStudentView: boolean;
   viewingAsStudent: boolean;
+  courseSearch: CourseSearchState;
   user: User | null;
   onHelpClick: () => void;
   onLogout: () => void;
@@ -19,9 +22,11 @@ interface MobileHeaderProps {
 const MobileHeader: React.FC<MobileHeaderProps> = ({
   isNavOpen,
   onToggleNav,
+  onCloseNav,
   displayAsInstructor,
   canSwitchToStudentView,
   viewingAsStudent,
+  courseSearch,
   user,
   onHelpClick,
   onLogout,
@@ -48,7 +53,12 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
         </Link>
 
         {/* Search */}
-        <CourseSearch variant="mobile" displayAsInstructor={displayAsInstructor} />
+        <CourseSearch
+          variant="mobile"
+          displayAsInstructor={displayAsInstructor}
+          courseSearch={courseSearch}
+          onNavigate={onCloseNav}
+        />
 
         {/* Profile */}
         <div className="relative flex-shrink-0">

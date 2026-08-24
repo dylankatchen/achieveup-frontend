@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeftRight } from 'lucide-react';
 import UserMenu from './UserMenu';
 import CourseSearch from './CourseSearch';
+import { CourseSearchState } from './types';
 import { User } from '../../../types';
 
 interface DesktopHeaderProps {
@@ -10,6 +11,7 @@ interface DesktopHeaderProps {
   displayAsInstructor: boolean;
   canSwitchToStudentView: boolean;
   viewingAsStudent: boolean;
+  courseSearch: CourseSearchState;
   onHelpClick: () => void;
   onLogout: () => void;
 }
@@ -19,6 +21,7 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   displayAsInstructor,
   canSwitchToStudentView,
   viewingAsStudent,
+  courseSearch,
   onHelpClick,
   onLogout,
 }) => {
@@ -27,7 +30,7 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
       {/* search */}
 
       <div className="flex flex-1 justify-center">
-        <CourseSearch variant="desktop" displayAsInstructor={displayAsInstructor} />
+        <CourseSearch variant="desktop" displayAsInstructor={displayAsInstructor} courseSearch={courseSearch} />
       </div>
 
       {/* Header Right side */}
