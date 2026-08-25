@@ -10,6 +10,13 @@ jest.mock('../../../contexts/AuthContext', () => ({
   useAuth: jest.fn(),
 }));
 
+jest.mock('../../../services/api', () => ({
+  canvasAPI: {
+    getCourses: jest.fn().mockResolvedValue({ data: [] }),
+    getInstructorCourses: jest.fn().mockResolvedValue({ data: [] }),
+  },
+}));
+
 const instructorUser: User = {
   id: 'instructor-1',
   name: 'Jane Instructor',

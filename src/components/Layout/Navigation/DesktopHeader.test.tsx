@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import DesktopHeader from './DesktopHeader';
 import { User } from '../../../types';
+import { CourseSearchState } from './types';
 
 const user: User = {
   id: 'instructor-1',
@@ -11,6 +12,13 @@ const user: User = {
   email: 'jane@example.com',
   role: 'instructor',
   canvasTokenType: 'instructor',
+};
+
+const courseSearch: CourseSearchState = {
+  courses: [],
+  loading: false,
+  error: false,
+  ensureLoaded: jest.fn(),
 };
 
 const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -25,6 +33,7 @@ const renderHeader = (props: Partial<React.ComponentProps<typeof DesktopHeader>>
         displayAsInstructor
         canSwitchToStudentView={false}
         viewingAsStudent={false}
+        courseSearch={courseSearch}
         onHelpClick={jest.fn()}
         onLogout={jest.fn()}
         {...props}
@@ -35,7 +44,7 @@ const renderHeader = (props: Partial<React.ComponentProps<typeof DesktopHeader>>
 describe('DesktopHeader', () => {
   test('renders a search input and the user menu trigger', () => {
     renderHeader();
-    expect(screen.getByPlaceholderText(/search skills or courses/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/search courses/i)).toBeInTheDocument();
     expect(screen.getByText('Jane Instructor')).toBeInTheDocument();
   });
 

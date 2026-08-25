@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
 import MobileHeader from './MobileHeader';
 import { User } from '../../../types';
+import { CourseSearchState } from './types';
 
 const user: User = {
   id: 'instructor-1',
@@ -11,6 +12,13 @@ const user: User = {
   email: 'jane@example.com',
   role: 'instructor',
   canvasTokenType: 'instructor',
+};
+
+const courseSearch: CourseSearchState = {
+  courses: [],
+  loading: false,
+  error: false,
+  ensureLoaded: jest.fn(),
 };
 
 const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -23,9 +31,11 @@ const renderHeader = (props: Partial<React.ComponentProps<typeof MobileHeader>> 
       <MobileHeader
         isNavOpen={false}
         onToggleNav={jest.fn()}
+        onCloseNav={jest.fn()}
         displayAsInstructor
         canSwitchToStudentView={false}
         viewingAsStudent={false}
+        courseSearch={courseSearch}
         user={user}
         onHelpClick={jest.fn()}
         onLogout={jest.fn()}
@@ -44,7 +54,7 @@ describe('MobileHeader', () => {
 
   test('renders a search input', () => {
     renderHeader();
-    expect(screen.getByPlaceholderText(/search skills or courses/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/search courses/i)).toBeInTheDocument();
   });
 
   test('logo links home for instructors, to /student-dashboard when displayAsInstructor is false', () => {
@@ -56,9 +66,11 @@ describe('MobileHeader', () => {
         <MobileHeader
           isNavOpen={false}
           onToggleNav={jest.fn()}
+          onCloseNav={jest.fn()}
           displayAsInstructor={false}
           canSwitchToStudentView={false}
           viewingAsStudent={false}
+          courseSearch={courseSearch}
           user={user}
           onHelpClick={jest.fn()}
           onLogout={jest.fn()}
