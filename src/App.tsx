@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useSearchParams } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/Layout/Layout';
@@ -14,6 +14,12 @@ import SkillAssignmentInterface from './components/SkillAssignmentInterface/Skil
 import StudentPublicBadges from './pages/StudentPublicBadges';
 import RequireRole from './components/common/RequireRole';
 import RoleHome from './components/common/RoleHome';
+
+// Supports deep-linking from search: /skill-matrix?courseId=123
+const SkillMatrixRoute: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  return <SkillMatrixCreator courseId={searchParams.get('courseId') ?? undefined} />;
+};
 
 const AppRoutes: React.FC = () => {
   return (
@@ -50,7 +56,7 @@ const AppRoutes: React.FC = () => {
           path="/skill-matrix"
           element={
             <Layout>
-              <SkillMatrixCreator />
+              <SkillMatrixRoute />
             </Layout>
           }
         />

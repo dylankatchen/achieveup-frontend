@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useCourseList } from '../../../hooks/useCourseList';
 import { getNavigationItems } from './navigationItems';
 import DesktopSidebar from './DesktopSidebar';
 import DesktopHeader from './DesktopHeader';
@@ -26,6 +27,14 @@ const Navigation: React.FC = () => {
 
   const navigationItems = getNavigationItems(displayAsInstructor);
 
+  // Fetched once here (not lazily inside CourseSearch) so the desktop and
+  // mobile header — both always mounted, just CSS-hidden by breakpoint —
+  // share one course list instead of each fetching it independently.
+  const { courses, loading, error, ensureLoaded } = useCourseList(displayAsInstructor, {
+    eager: false,
+  });
+  const courseSearch = { courses, loading, error, ensureLoaded };
+
   const handleLogout = (): void => {
     logout();
   };
@@ -48,6 +57,7 @@ const Navigation: React.FC = () => {
           displayAsInstructor={displayAsInstructor}
           canSwitchToStudentView={canSwitchToStudentView}
           viewingAsStudent={viewingAsStudent}
+          courseSearch={courseSearch}
           onHelpClick={() => setShowHelpModal(true)}
           onLogout={handleLogout}
         />
@@ -58,9 +68,11 @@ const Navigation: React.FC = () => {
       <MobileHeader
         isNavOpen={isOpen}
         onToggleNav={() => setIsOpen(!isOpen)}
+        onCloseNav={() => setIsOpen(false)}
         displayAsInstructor={displayAsInstructor}
         canSwitchToStudentView={canSwitchToStudentView}
         viewingAsStudent={viewingAsStudent}
+        courseSearch={courseSearch}
         user={user}
         onHelpClick={() => setShowHelpModal(true)}
         onLogout={handleLogout}

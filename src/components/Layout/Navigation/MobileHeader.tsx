@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, X, BookOpen, Search } from 'lucide-react';
+import { Menu, X, BookOpen } from 'lucide-react';
 import AccountMenu from './AccountMenu';
+import CourseSearch from './CourseSearch';
+import { CourseSearchState } from './types';
 import { User } from '../../../types';
 
 interface MobileHeaderProps {
   isNavOpen: boolean;
   onToggleNav: () => void;
+  onCloseNav: () => void;
   displayAsInstructor: boolean;
   canSwitchToStudentView: boolean;
   viewingAsStudent: boolean;
+  courseSearch: CourseSearchState;
   user: User | null;
   onHelpClick: () => void;
   onLogout: () => void;
@@ -18,9 +22,11 @@ interface MobileHeaderProps {
 const MobileHeader: React.FC<MobileHeaderProps> = ({
   isNavOpen,
   onToggleNav,
+  onCloseNav,
   displayAsInstructor,
   canSwitchToStudentView,
   viewingAsStudent,
+  courseSearch,
   user,
   onHelpClick,
   onLogout,
@@ -48,15 +54,12 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
         </Link>
 
         {/* Search */}
-        <div className="relative min-w-0 flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-
-          <input
-            type="text"
-            placeholder="Search skills or courses..."
-            className="h-9 w-full rounded-full border border-gray-200 bg-gray-50 pl-9 pr-3 text-sm text-gray-700 outline-none transition focus:border-au-gold focus:bg-white focus:ring-1 focus:ring-au-gold"
-          />
-        </div>
+        <CourseSearch
+          variant="mobile"
+          displayAsInstructor={displayAsInstructor}
+          courseSearch={courseSearch}
+          onNavigate={onCloseNav}
+        />
 
         {/* Profile */}
         <div className="relative flex-shrink-0">
