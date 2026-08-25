@@ -29,6 +29,12 @@ jest.mock('../../contexts/AuthContext', () => ({
   useAuth: () => mockAuthContext,
 }));
 
+jest.mock('../../services/api', () => ({
+  canvasAPI: {
+    getCourses: jest.fn().mockResolvedValue({ data: [] }),
+  },
+}));
+
 const NavigationWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <BrowserRouter>{children}</BrowserRouter>
 );

@@ -14,16 +14,11 @@ import {
 import toast from 'react-hot-toast';
 import { skillAssignmentAPI, canvasAPI, skillMatrixAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCourseList } from '../../hooks/useCourseList';
+import { CanvasCourse } from '../../types';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Card from '../common/Card';
-
-interface CanvasCourse {
-  id: string;
-  name: string;
-  code: string;
-  term: number;
-}
 
 interface CanvasQuiz {
   id: string;
@@ -84,7 +79,6 @@ function getQuestionKey(question: CanvasQuestion): string {
 
 const SkillAssignmentInterface: React.FC = () => {
   const { user } = useAuth();
-  const [courses, setCourses] = useState<CanvasCourse[]>([]);
   const [quizzes, setQuizzes] = useState<CanvasQuiz[]>([]);
   const [questions, setQuestions] = useState<CanvasQuestion[]>([]);
   const [questionSkills, setQuestionSkills] = useState<QuestionSkills>({});
@@ -122,6 +116,13 @@ const SkillAssignmentInterface: React.FC = () => {
   const watchedQuiz = watch('quizId');
 
   const { isInstructor } = useAuth();
+  const { courses, loading: coursesLoading, error: coursesError } = useCourseList<CanvasCourse>(isInstructor);
+
+  useEffect(() => {
+    if (coursesError) {
+      toast.error('Failed to load courses. Please check your Canvas integration.');
+    }
+  }, [coursesError]);
 
   // Backend AI analysis for all questions
   const analyzeQuestionsWithAI = useCallback(
@@ -390,21 +391,6 @@ const SkillAssignmentInterface: React.FC = () => {
     },
     [courses, getBaseCourseCode, getSection]
   );
-
-  const loadCourses = useCallback(async (): Promise<void> => {
-    try {
-      setLoading(true);
-      const response = isInstructor
-        ? await canvasAPI.getInstructorCourses()
-        : await canvasAPI.getCourses();
-      setCourses(response.data);
-    } catch (error) {
-      console.error('Error loading courses:', error);
-      toast.error('Failed to load courses. Please check your Canvas integration.');
-    } finally {
-      setLoading(false);
-    }
-  }, [isInstructor]);
 
   const loadQuizzes = useCallback(
     async (courseId: string): Promise<void> => {
@@ -846,10 +832,6 @@ const SkillAssignmentInterface: React.FC = () => {
   );
 
   useEffect(() => {
-    loadCourses();
-  }, [loadCourses]);
-
-  useEffect(() => {
     if (watchedCourse) {
       loadQuizzes(watchedCourse);
     }
@@ -1013,7 +995,7 @@ const SkillAssignmentInterface: React.FC = () => {
   const stats = getAssignmentStats();
   const filteredQuestions = getFilteredQuestions();
 
-  if (loading && courses.length === 0) {
+  if (coursesLoading && courses.length === 0) {
     return (
       <div className="max-w-7xl mx-auto p-6">
         <div className="flex justify-center items-center h-64">

@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeftRight, Search } from 'lucide-react';
+import { ArrowLeftRight } from 'lucide-react';
 import UserMenu from './UserMenu';
+import CourseSearch from './CourseSearch';
+import { CourseSearchState } from './types';
 import { User } from '../../../types';
 
 interface DesktopHeaderProps {
@@ -9,6 +11,7 @@ interface DesktopHeaderProps {
   displayAsInstructor: boolean;
   canSwitchToStudentView: boolean;
   viewingAsStudent: boolean;
+  courseSearch: CourseSearchState;
   onHelpClick: () => void;
   onLogout: () => void;
 }
@@ -18,6 +21,7 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   displayAsInstructor,
   canSwitchToStudentView,
   viewingAsStudent,
+  courseSearch,
   onHelpClick,
   onLogout,
 }) => {
@@ -26,15 +30,7 @@ const DesktopHeader: React.FC<DesktopHeaderProps> = ({
       {/* search */}
 
       <div className="flex flex-1 justify-center">
-        <div className="relative w-full max-w-[500px]">
-          <Search className="absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-400" />
-
-          <input
-            type="text"
-            placeholder="Search skills or courses..."
-            className="h-[42px] w-full rounded-lg border border-gray-200 bg-white pl-11 pr-4 text-sm text-gray-700 outline-none transition focus:border-au-gold focus:ring-1 focus:ring-au-gold"
-          />
-        </div>
+        <CourseSearch variant="desktop" displayAsInstructor={displayAsInstructor} courseSearch={courseSearch} />
       </div>
 
       {/* Header Right side */}
